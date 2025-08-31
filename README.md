@@ -1,5 +1,7 @@
 # Akashic
 
+![Build Status](https://github.com/lgwillmore/akashic/actions/workflows/check.yml/badge.svg?branch=main)
+
 > "The Akashic Records is an etheric library that records each of our actions, thoughts, emotions and words. This infinite database contains information about every being since the dawn of time."
 
 Akashic is an open-source Kotlin library that provides a simple and flexible way to implement event sourcing in your
