@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Specify the release version [major, minor, patch]'
+        required: true
+        default: 'minor' # Default value if no input is provided
+env:
+  BASE_JRE_IMAGE: jre8_aws
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    if: github.ref_name == 'main'
+    env:
+      SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+      SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+      SONATYPE_SIGNING_PASSWORD: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
+      SONATYPE_SIGNING_KEY: ${{ secrets.SONATYPE_SIGNING_KEY }}
+    steps:
+      ## Setup
+      - name: bump
+        uses: zwaldowski/semver-release-action@v2
+        with:
+          bump: ${{ inputs.release_version }}
+          prefix: ""
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up JDK 17
+        uses: actions/setup-java@v1
+        with:
+          java-version: 17
+      - name: Publish
+        run: ./gradlew publish

@@ -26,7 +26,7 @@ interface EventStoreRead<EVENT : DomainEvent, CHECKPOINT : CheckPoint> {
   ): Result<List<CommitedEvent<EVENT>>>
 
   /**
-   * Returns subscription to all events for this domain aggregate. [CommitedEvent.version] is for a
+   * Returns subscription to all events for this domain aggregate. [SubEvent.checkPoint] is for a
    * global sequence.
    */
   suspend fun subscribeToEvents(
