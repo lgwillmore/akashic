@@ -5,8 +5,8 @@
 You need to configure the following secrets in your GitHub repository settings:
 
 ### 1. Central Portal Credentials
-- `CENTRAL_PORTAL_USERNAME`: Your Sonatype Central Portal username
-- `CENTRAL_PORTAL_PASSWORD`: Your Sonatype Central Portal password or user token
+- `MAVEN_CENTRAL_PORTAL_USERNAME`: Your Sonatype Central Portal username
+- `MAVEN_CENTRAL_PORTAL_PASSWORD`: Your Sonatype Central Portal password or user token
 
 ### 2. Signing Credentials (unchanged)
 - `SONATYPE_SIGNING_KEY`: Your GPG private key in ASCII-armored format
@@ -27,7 +27,7 @@ Instead of using your password, generate a user token:
 1. Log in to Central Portal
 2. Go to Account → Generate User Token
 3. Copy the username and password provided
-4. Use these as your `CENTRAL_PORTAL_USERNAME` and `CENTRAL_PORTAL_PASSWORD`
+4. Use these as your `MAVEN_CENTRAL_PORTAL_USERNAME` and `MAVEN_CENTRAL_PORTAL_PASSWORD`
 
 ### 3. Configure GitHub Secrets
 
@@ -35,8 +35,8 @@ In your GitHub repository:
 
 1. Go to Settings → Secrets and variables → Actions
 2. Add the following repository secrets:
-   - `CENTRAL_PORTAL_USERNAME`
-   - `CENTRAL_PORTAL_PASSWORD`
+   - `MAVEN_CENTRAL_PORTAL_USERNAME`
+   - `MAVEN_CENTRAL_PORTAL_PASSWORD`
    - `SONATYPE_SIGNING_KEY` (if not already configured)
    - `SONATYPE_SIGNING_PASSWORD` (if not already configured)
 
@@ -83,22 +83,14 @@ You can also publish manually from your local machine:
 
 ```bash
 # Set environment variables
-export CENTRAL_PORTAL_USERNAME="your-username"
-export CENTRAL_PORTAL_PASSWORD="your-password"
+export MAVEN_CENTRAL_PORTAL_USERNAME="your-username"
+export MAVEN_CENTRAL_PORTAL_PASSWORD="your-password"
 export SONATYPE_SIGNING_KEY="your-gpg-private-key"
 export SONATYPE_SIGNING_PASSWORD="your-gpg-passphrase"
 
 # Publish
 ./gradlew publish
 ```
-
-## Migration from Legacy Setup
-
-If you're migrating from the old OSSRH setup:
-
-1. **Update GitHub Secrets**: Replace `SONATYPE_USERNAME` and `SONATYPE_PASSWORD` with `CENTRAL_PORTAL_USERNAME` and `CENTRAL_PORTAL_PASSWORD`
-2. **Verify Namespace**: Ensure your namespace is verified in Central Portal
-3. **Test Publishing**: Run a test publish with a snapshot version first
 
 ## Troubleshooting
 

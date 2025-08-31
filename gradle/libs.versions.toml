@@ -7,17 +7,18 @@ kotlin = "2.1.10"
 kotlinxDatetime = "0.6.1"
 kotlinxSerializationJSON = "1.7.2"
 kotlinxCoroutines = "1.8.1"
-axionRelease = "1.16.1"
 foojayResolver = "0.8.0"
 exposed = "0.60.0"
 ktfmt = "0.22.0"
 kotlinLogging = "7.0.3"
+jReleaser = "1.20.0"
 
 [libraries]
 kotlinGradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlinxDatetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
 kotlinxSerialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJSON" }
 kotlinxCoroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+jReleaser = { module = "org.jreleaser:org.jreleaser.gradle.plugin", version.ref = "jReleaser" }
 
 kotlnLoggingJvm = {module = "io.github.oshai:kotlin-logging-jvm", version.ref = "kotlinLogging"}
 
@@ -29,6 +30,5 @@ kotlinxEcosystem = ["kotlinxDatetime", "kotlinxSerialization", "kotlinxCoroutine
 
 [plugins]
 kotlinPluginSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-axionRelease = { id = "pl.allegro.tech.build.axion-release", version.ref = "axionRelease" }
 foojayResolver = { id = "org.gradle.toolchains.foojay-resolver-convention", version.ref = "foojayResolver" }
 ktfmt = { id = "com.ncorti.ktfmt.gradle", version.ref = "ktfmt"}
