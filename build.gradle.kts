@@ -1,6 +1,7 @@
 
 plugins {
     alias(libs.plugins.axionRelease)
+    alias(libs.plugins.ktfmt)
 }
 
 scmVersion {
@@ -11,5 +12,7 @@ scmVersion {
         "${version}-${position.shortRevision}"
     }
 }
-
 project.version = scmVersion.version
+project.group = "codes.laurence.akashic"
+
+subprojects { apply(plugin = "com.ncorti.ktfmt.gradle") }

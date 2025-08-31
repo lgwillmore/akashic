@@ -23,7 +23,12 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
 }
 
-include(":core")
-include(":store-exposed")
+include(
+    ":core",
+    ":store-exposed"
+)
+
+project(":core").name = "akashic-core"
+project(":store-exposed").name = "akashic-store-exposed"
 
 rootProject.name = "akashic"

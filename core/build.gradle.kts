@@ -1,3 +1,3 @@
-plugins {
-    id("buildsrc.convention.kotlin-jvm")
-}
+plugins { id("buildsrc.convention.kotlin-jvm") }
+
+dependencies { implementation(libs.bundles.kotlinxEcosystem) }
