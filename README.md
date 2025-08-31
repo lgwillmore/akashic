@@ -1,6 +1,6 @@
 # Akashic
 
-> "The Akashic Records can be equated to the universe's super-computer system. It is this system that acts as the central storehouse of all information... a record of all that has occurred." - Edgar Cayce
+> "The Akashic Records is an etheric library that records each of our actions, thoughts, emotions and words. This infinite database contains information about every being since the dawn of time."
 
 Akashic is an open-source Kotlin library that provides a simple and flexible way to implement event sourcing in your
 applications. Event sourcing is a powerful pattern for building robust and scalable systems, and Akashic makes it easy
