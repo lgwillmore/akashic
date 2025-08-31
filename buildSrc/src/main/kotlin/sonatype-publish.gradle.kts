@@ -17,19 +17,19 @@ if (project != rootProject) {
     version = rootProject.version
 }
 
-// in $GRADLE_USER_HOME/gradle.properties, set
-// sonatypeRepositoryUsername=...
-// sonatypeRepositoryPassword=...
-// Or set environment variables
-// ORG_GRADLE_PROJECT_sonatypeRepositoryUsername=...
-// ORG_GRADLE_PROJECT_sonatypeRepositoryPassword=...
-val sonatypeRepositoryCredentials: Provider<Action<PasswordCredentials>> =
-    providers.credentialsAction("SONATYPE")
+// Modern Sonatype Central Portal configuration
+// Set environment variables:
+// CENTRAL_PORTAL_USERNAME=... (your Central Portal username)
+// CENTRAL_PORTAL_PASSWORD=... (your Central Portal password/token)
+val centralPortalCredentials: Provider<Action<PasswordCredentials>> =
+    providers.credentialsAction("CENTRAL_PORTAL")
 
 val sonatypeRepositoryReleaseUrl: Provider<String> = provider {
     if (version.toString().endsWith("SNAPSHOT")) {
+        // Snapshots go to the snapshot repository
         "https://s01.oss.sonatype.org/content/repositories/snapshots/"
     } else {
+        // Releases go to the staging repository (modern approach still uses this)
         "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
     }
 }
@@ -77,10 +77,10 @@ signing {
 
 publishing {
     repositories {
-        if (sonatypeRepositoryCredentials.isPresent) {
+        if (centralPortalCredentials.isPresent) {
             maven(sonatypeRepositoryReleaseUrl) {
                 name = "sonatype"
-                credentials(sonatypeRepositoryCredentials.get())
+                credentials(centralPortalCredentials.get())
             }
         } else {
             // publish to local dir, for testing
@@ -152,4 +152,3 @@ fun Project.javadocStubTask(): Jar {
 
     return javadocJarStub
 }
-
