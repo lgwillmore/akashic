@@ -1,12 +1,25 @@
-
-plugins {
-//    id("com.palantir.git-version") version "0.12.3"
-    id("io.github.offrange.git-semantic-versioning") version "0.2.5"
-    alias(libs.plugins.ktfmt)
-}
+plugins { alias(libs.plugins.ktfmt) }
 
 group = "codes.laurence.akashic"
 
-subprojects {
-    apply(plugin = "com.ncorti.ktfmt.gradle")
-}
+// A commit carrying a release tag (e.g. `0.2.0`) builds that version; any other commit builds a `-SNAPSHOT`
+// (`0.2.0-3-gabc1234-SNAPSHOT`, or `0.0.0-SNAPSHOT` without tags), which can never become a Maven Central release.
+version =
+    providers
+        .exec {
+          commandLine("git", "describe", "--tags", "--match", "[0-9]*.[0-9]*.[0-9]*")
+          isIgnoreExitValue = true
+        }
+        .standardOutput
+        .asText
+        .get()
+        .trim()
+        .let { described ->
+          when {
+            described.matches(Regex("""\d+\.\d+\.\d+""")) -> described
+            described.isEmpty() -> "0.0.0-SNAPSHOT"
+            else -> "$described-SNAPSHOT"
+          }
+        }
+
+subprojects { apply(plugin = "com.ncorti.ktfmt.gradle") }

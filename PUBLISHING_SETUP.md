@@ -1,120 +1,73 @@
 # Publishing
 
-## GitHub Packages (current)
+The library modules (`akashic-core`, `akashic-backend-exposed`, `akashic-backend-kurrent`) apply the
+`buildsrc.convention.publish` convention, which publishes them to Maven Central with the
+[vanniktech Maven Publish plugin](https://vanniktech.github.io/gradle-maven-publish-plugin/): jar, sources, an empty
+javadoc jar, Gradle module metadata and POM, all signed. Test fixtures and `integration-tests` are never published.
 
-Library modules apply the `buildsrc.convention.publish` convention, which creates the `maven` publication (jar,
-sources, javadoc, POM; test fixtures are left out) and the `GitHubPackages` repository.
+## Versions
 
-Releasing needs no secrets:
+The version comes from git. A commit carrying a release tag (`X.Y.Z`, no `v` prefix) builds that version; any other
+commit builds a `-SNAPSHOT` such as `0.1.0-3-gabc1234-SNAPSHOT`, which can never become a Maven Central release. Only
+the Release workflow creates release tags.
 
-1. Go to the Actions tab and run the "Release" workflow on `main`, choosing the bump (major, minor, patch).
-2. It tags the commit (no `v` prefix, e.g. `0.2.0`), and the versioning plugin turns that tag into the version.
-3. It runs `./gradlew publishAllPublicationsToGitHubPackagesRepository` with the workflow's `GITHUB_TOKEN`.
+## Releasing
 
-To publish from a machine instead, set `gpr.user` (GitHub user) and `gpr.key` (a token with `write:packages`) in
-`~/.gradle/gradle.properties`, or export `GITHUB_ACTOR` and `GITHUB_TOKEN`, then run the same task. Untagged commits
-get a development version such as `0.1.0+dev.1.1c2b0ee`.
+Go to Actions → Release → Run workflow on `main`, and choose `patch`, `minor` or `major`. The workflow:
 
-Consumers need a token with `read:packages`, even for public packages; see the README.
+1. runs the Check workflow (ktfmt and the full test suite);
+2. tags the commit locally with the next version, bumped from the highest `X.Y.Z` tag;
+3. runs `./gradlew publishAndReleaseToMavenCentral`, which uploads all modules as one deployment, releases it, and
+   waits for Central to validate it;
+4. pushes the tag and creates a GitHub release with generated notes.
 
-## Maven Central (later, not wired up)
+A failed check or publish pushes no tag, so the workflow can simply be run again. A Maven Central release is
+permanent: a version can never be replaced or deleted. It is usually downloadable within 30 minutes and searchable
+on central.sonatype.com a little later. If publishing succeeded but the tag push failed, push the tag by hand
+(`git tag -a X.Y.Z <commit> -m "Release X.Y.Z" && git push origin X.Y.Z`); re-running would fail because Central
+rejects an existing version.
 
-`buildsrc.convention.sonatype-publish` layers signing and JReleaser's Maven Central deploy on top of the publish
-convention. To switch, apply it in place of `buildsrc.convention.publish` in each library module and give the Release
-workflow a JReleaser deploy step with the secrets below.
+## One-time setup
 
-### Required GitHub Secrets
+1. Sign in to the [Central Portal](https://central.sonatype.com/).
+2. Verify the `codes.laurence` namespace: Publishing → Namespaces → Add Namespace, then add the TXT record it shows to
+   the DNS of `laurence.codes` and press Verify. (Without control of that domain, change `group` in the root
+   `build.gradle.kts` to `io.github.lgwillmore`, which is verified automatically when signed in with GitHub.)
+3. Generate a user token: Account → Generate User Token.
+4. Create a signing key and publish its public half, which Central uses to check the signatures:
 
-You need to configure the following secrets in your GitHub repository settings:
+   ```shell
+   gpg --quick-gen-key "Your Name <you@example.com>" ed25519 sign never
+   gpg --list-secret-keys --keyid-format long          # the key ID follows "ed25519/"
+   gpg --keyserver keyserver.ubuntu.com --send-keys KEY_ID
+   gpg --keyserver keys.openpgp.org --send-keys KEY_ID
+   gpg --armor --export-secret-keys KEY_ID             # the value of SONATYPE_SIGNING_KEY
+   ```
 
-#### 1. Central Portal Credentials
-- `MAVEN_CENTRAL_PORTAL_USERNAME`: Your Sonatype Central Portal username
-- `MAVEN_CENTRAL_PORTAL_PASSWORD`: Your Sonatype Central Portal password or user token
+5. Add the repository secrets under Settings → Secrets and variables → Actions:
 
-#### 2. Signing Credentials (unchanged)
-- `SONATYPE_SIGNING_KEY`: Your GPG private key in ASCII-armored format
-- `SONATYPE_SIGNING_PASSWORD`: The passphrase for your GPG private key
+   | Secret | Value |
+   | --- | --- |
+   | `MAVEN_CENTRAL_PORTAL_USERNAME` | user token username |
+   | `MAVEN_CENTRAL_PORTAL_PASSWORD` | user token password |
+   | `SONATYPE_SIGNING_KEY` | ASCII-armored private key, including the `BEGIN`/`END` lines |
+   | `SONATYPE_SIGNING_PASSWORD` | the key's passphrase |
 
-### Setup Instructions
+## Publishing from a machine
 
-#### 1. Create Sonatype Central Portal Account
+`./gradlew publishToMavenLocal` installs the current snapshot in `~/.m2` for trying it in another project; snapshots
+need no signing key.
 
-1. Go to [https://central.sonatype.com/](https://central.sonatype.com/)
-2. Sign up for a new account or log in with existing credentials
-3. Verify your namespace (e.g., `codes.laurence.akashic`)
+To rehearse a release without making it public, tag a commit locally (`git tag 0.1.0`, never pushed), provide the
+credentials, and upload a deployment that waits for a manual decision:
 
-#### 2. Generate User Token (Recommended)
-
-Instead of using your password, generate a user token:
-
-1. Log in to Central Portal
-2. Go to Account → Generate User Token
-3. Copy the username and password provided
-4. Use these as your `MAVEN_CENTRAL_PORTAL_USERNAME` and `MAVEN_CENTRAL_PORTAL_PASSWORD`
-
-#### 3. Configure GitHub Secrets
-
-In your GitHub repository:
-
-1. Go to Settings → Secrets and variables → Actions
-2. Add the following repository secrets:
-   - `MAVEN_CENTRAL_PORTAL_USERNAME`
-   - `MAVEN_CENTRAL_PORTAL_PASSWORD`
-   - `SONATYPE_SIGNING_KEY` (if not already configured)
-   - `SONATYPE_SIGNING_PASSWORD` (if not already configured)
-
-#### 4. GPG Key Setup (if not already done)
-
-If you don't have GPG keys set up:
-
-```bash
-# Generate a new GPG key
-gpg --gen-key
-
-# Export the private key in ASCII format
-gpg --armor --export-secret-keys YOUR_KEY_ID
-
-# Export the public key
-gpg --armor --export YOUR_KEY_ID
+```shell
+export ORG_GRADLE_PROJECT_mavenCentralUsername=...
+export ORG_GRADLE_PROJECT_mavenCentralPassword=...
+export ORG_GRADLE_PROJECT_signingInMemoryKey="$(gpg --armor --export-secret-keys KEY_ID)"
+export ORG_GRADLE_PROJECT_signingInMemoryKeyPassword=...
+./gradlew publishToMavenCentral
 ```
 
-Upload your public key to key servers:
-```bash
-gpg --keyserver keyserver.ubuntu.com --send-keys YOUR_KEY_ID
-gpg --keyserver keys.openpgp.org --send-keys YOUR_KEY_ID
-```
-
-### Publishing Process
-
-#### Automatic Publishing
-
-Once the Release workflow has a deploy step, triggering a release will:
-
-1. Create a new version tag
-2. Build the project
-3. Sign the artifacts
-4. Publish to Maven Central
-
-#### Manual Publishing
-
-With the convention applied, you can also publish from your local machine:
-
-```bash
-# Set environment variables
-export MAVEN_CENTRAL_PORTAL_USERNAME="your-username"
-export MAVEN_CENTRAL_PORTAL_PASSWORD="your-password"
-export SONATYPE_SIGNING_KEY="your-gpg-private-key"
-export SONATYPE_SIGNING_PASSWORD="your-gpg-passphrase"
-
-# Stage the artifacts, then deploy them
-./gradlew publish
-./gradlew jreleaserDeploy
-```
-
-### Troubleshooting
-
-#### Getting Help
-
-- [Sonatype Central Portal Documentation](https://central.sonatype.org/publish/)
-- [GitHub Actions Documentation](https://docs.github.com/en/actions)
-- [Gradle Publishing Documentation](https://docs.gradle.org/current/userguide/publishing_maven.html)
+Inspect the deployment under Publishing → Deployments in the Central Portal, then drop it there and delete the local
+tag (`git tag -d 0.1.0`). Pressing Publish there instead makes it a permanent release that has no pushed tag.

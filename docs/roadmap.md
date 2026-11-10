@@ -32,7 +32,8 @@ framework boundary live in [`AGENTS.md`](../AGENTS.md).
 9. Move projection-oriented `synchronous/WaitForVersion.kt` out of core (use `kotlin.time.Duration`, monotonic time,
    honest exception handling).
 10. Footprint budgets and adapter benchmarks against native operations.
-11. Maven Central publishing (namespace verification, signing); releases go to GitHub Packages until then.
+11. First Maven Central release. Publishing and the Release workflow are wired; the release waits on verifying the
+    `codes.laurence` namespace and adding the token and signing-key secrets (`PUBLISHING_SETUP.md`).
 
 ### Hardening
 

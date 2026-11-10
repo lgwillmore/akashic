@@ -25,17 +25,11 @@ application.
 | `codes.laurence.akashic:akashic-backend-exposed` | PostgreSQL backend on [Exposed](https://github.com/JetBrains/Exposed), with Liquibase migrations |
 | `codes.laurence.akashic:akashic-backend-kurrent` | [KurrentDB](https://www.kurrent.io/) backend |
 
-Releases are published to GitHub Packages, which needs a GitHub token with `read:packages` even for public packages:
+Releases are published to Maven Central:
 
 ```kotlin
 repositories {
-    maven {
-        url = uri("https://maven.pkg.github.com/lgwillmore/akashic")
-        credentials {
-            username = providers.gradleProperty("gpr.user").get()
-            password = providers.gradleProperty("gpr.key").get()
-        }
-    }
+    mavenCentral()
 }
 
 dependencies {
