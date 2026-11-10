@@ -2,8 +2,9 @@
 
 The library modules (`akashic-core`, `akashic-backend-exposed`, `akashic-backend-kurrent`) apply the
 `buildsrc.convention.publish` convention, which publishes them to Maven Central with the
-[vanniktech Maven Publish plugin](https://vanniktech.github.io/gradle-maven-publish-plugin/): jar, sources, an empty
-javadoc jar, Gradle module metadata and POM, all signed. Test fixtures and `integration-tests` are never published.
+[vanniktech Maven Publish plugin](https://vanniktech.github.io/gradle-maven-publish-plugin/): jar, sources, a
+javadoc jar holding the Dokka API reference, Gradle module metadata and POM, all signed. Test fixtures,
+`integration-tests` and the guide snippets are never published.
 
 ## Versions
 
@@ -19,7 +20,8 @@ Go to Actions → Release → Run workflow on `main`, and choose `patch`, `minor
 2. tags the commit locally with the next version, bumped from the highest `X.Y.Z` tag;
 3. runs `./gradlew publishAndReleaseToMavenCentral`, which uploads all modules as one deployment, releases it, and
    waits for Central to validate it;
-4. pushes the tag and creates a GitHub release with generated notes.
+4. pushes the tag and creates a GitHub release with generated notes;
+5. runs the Docs workflow, which publishes the guides and API reference for the new version to GitHub Pages.
 
 A failed check or publish pushes no tag, so the workflow can simply be run again. A Maven Central release is
 permanent: a version can never be replaced or deleted. It is usually downloadable within 30 minutes and searchable
@@ -71,3 +73,10 @@ export ORG_GRADLE_PROJECT_signingInMemoryKeyPassword=...
 
 Inspect the deployment under Publishing → Deployments in the Central Portal, then drop it there and delete the local
 tag (`git tag -d 0.1.0`). Pressing Publish there instead makes it a permanent release that has no pushed tag.
+
+## Documentation site
+
+The Docs workflow builds the Writerside guides in `docs/guides` and the Dokka API reference, and deploys them to
+https://lgwillmore.github.io/akashic/ (API reference under `/api/`). It runs after each release, on demand from the
+Actions tab, and without deploying on every pull request. It needs Settings → Pages → Source set to "GitHub Actions"
+once.

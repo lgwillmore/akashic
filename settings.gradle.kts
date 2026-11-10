@@ -28,10 +28,14 @@ include(
     ":backend-exposed",
     ":backend-kurrent",
     ":integration-tests",
+    ":docs-snippets",
 )
 
 project(":core").name = "akashic-core"
 project(":backend-exposed").name = "akashic-backend-exposed"
 project(":backend-kurrent").name = "akashic-backend-kurrent"
+
+// Lives inside the Writerside module, whose topics quote its sources.
+project(":docs-snippets").projectDir = file("docs/guides/snippets")
 
 rootProject.name = "akashic"

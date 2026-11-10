@@ -1,4 +1,7 @@
-plugins { alias(libs.plugins.ktfmt) }
+plugins {
+  alias(libs.plugins.ktfmt)
+  id("org.jetbrains.dokka")
+}
 
 group = "codes.laurence.akashic"
 
@@ -23,3 +26,12 @@ version =
         }
 
 subprojects { apply(plugin = "com.ncorti.ktfmt.gradle") }
+
+// `dokkaGenerate` writes the API reference for every published module to build/dokka/html.
+dokka { moduleName = "Akashic" }
+
+dependencies {
+  dokka(project(":akashic-core"))
+  dokka(project(":akashic-backend-exposed"))
+  dokka(project(":akashic-backend-kurrent"))
+}

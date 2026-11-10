@@ -31,6 +31,13 @@ subscriptions and checkpoints, or snapshots across the supported backends.
 | `backend-kurrent` | `akashic-backend-kurrent` | `codes.laurence.akashic.backend.kurrent` | KurrentDB event streams and subscriptions. |
 | `integration-tests` | not published | `codes.laurence.akashic.integration` | Scenarios run against every backend: the shared event-store contract, subscription sources, the caching service over a shared store, and end-to-end builders. |
 
+| `docs/guides/snippets` (`:docs-snippets`) | not published | `codes.laurence.akashic.docs` | The bank-account application the guides quote, with its tests on the in-memory backend. |
+
+- The guides are a Writerside project in `docs/guides` (`topics/*.md`, `akashic.tree`). Topics quote
+  `docs/guides/snippets` by symbol name (`include-symbol`), so renaming a quoted declaration there means updating the
+  topic. Change a guide's code in the snippets module, never inline in the topic, and keep prose claims in step with
+  the library. The Docs workflow builds the guides and the Dokka API reference and publishes both to GitHub Pages on
+  each release.
 - Core never depends on a backend module. A backend depends on core through `api`, since its public types implement core contracts.
 - Declarations that backends need from core but users must not rely on are public and marked `@AkashicInternalApi`
   (a `RequiresOptIn` error). The build opts every module in; keep everything else `internal` or `private`.

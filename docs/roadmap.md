@@ -28,12 +28,12 @@ framework boundary live in [`AGENTS.md`](../AGENTS.md).
 7. Publish backend conformance suites and run first-party adapters through them. The shared suites in
    `integration-tests` are the starting point: today they loop over a fixed list of backends rather than taking an
    adapter.
-8. Quick-start and production wiring guide.
+8. Extend the published guides (`docs/guides`) with an operations guide: deployment topology, shutdown order,
+   monitoring runner and ownership state.
 9. Move projection-oriented `synchronous/WaitForVersion.kt` out of core (use `kotlin.time.Duration`, monotonic time,
    honest exception handling).
 10. Footprint budgets and adapter benchmarks against native operations.
-11. First Maven Central release. Publishing and the Release workflow are wired; the release waits on verifying the
-    `codes.laurence` namespace and adding the token and signing-key secrets (`PUBLISHING_SETUP.md`).
+11. Versioned documentation: keep the guides and API reference of earlier releases available once the API settles.
 
 ### Hardening
 
