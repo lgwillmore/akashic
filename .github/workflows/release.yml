@@ -7,18 +7,14 @@ on:
         description: 'Specify the release version [major, minor, patch]'
         required: true
         default: 'minor' # Default value if no input is provided
-env:
-  BASE_JRE_IMAGE: jre8_aws
 
 jobs:
   tag:
     runs-on: ubuntu-latest
     if: github.ref_name == 'main'
-    env:
-      CENTRAL_PORTAL_USERNAME: ${{ secrets.CENTRAL_PORTAL_USERNAME }}
-      CENTRAL_PORTAL_PASSWORD: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
-      SONATYPE_SIGNING_PASSWORD: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
-      SONATYPE_SIGNING_KEY: ${{ secrets.SONATYPE_SIGNING_KEY }}
+    permissions:
+      contents: write # create the version tag
+      packages: write # publish to GitHub Packages
     steps:
       ## Setup
       - name: bump
@@ -35,5 +31,8 @@ jobs:
         with:
           java-version: 17
           distribution: 'temurin'
-      - name: Publish
-        run: ./gradlew publish
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Publish to GitHub Packages
+        run: ./gradlew publishAllPublicationsToGitHubPackagesRepository
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

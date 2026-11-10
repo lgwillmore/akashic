@@ -1,21 +1,8 @@
 package codes.laurence.akashic.core.event
 
-import codes.laurence.akashic.core.aggregate.HasAggregate
-import java.util.*
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
+/** A domain event proposed by a decision but not yet prepared or committed to the event store. */
+data class ProposedEvent<out EVENT>(val event: EVENT)
 
-data class EventMeta(
-    override val aggregateId: UUID,
-    val eventId: UUID = UUID.randomUUID(),
-    val timestamp: Instant = Clock.System.now(),
-    val correlationId: UUID? = null
-) : HasAggregate
-
-interface DomainEvent {
-  val meta: EventMeta
-}
-
-interface HasEvents<EVENT : DomainEvent> {
+interface HasEvents<out EVENT> {
   val events: List<EVENT>
 }

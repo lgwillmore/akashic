@@ -1,12 +1,12 @@
 
 plugins {
-    id("com.palantir.git-version") version "4.0.0"
+//    id("com.palantir.git-version") version "0.12.3"
+    id("io.github.offrange.git-semantic-versioning") version "0.2.5"
     alias(libs.plugins.ktfmt)
 }
 
-val gitVersion: groovy.lang.Closure<String> by extra
-
-version = gitVersion()
 group = "codes.laurence.akashic"
 
-subprojects { apply(plugin = "com.ncorti.ktfmt.gradle") }
+subprojects {
+    apply(plugin = "com.ncorti.ktfmt.gradle")
+}

@@ -3,31 +3,37 @@
 package buildsrc.convention
 
 import org.gradle.api.tasks.testing.logging.TestLogEvent
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     kotlin("jvm")
 }
 
+val libs = the<VersionCatalogsExtension>().named("libs")
+
 kotlin {
-    // Build with 17
     jvmToolchain(17)
     compilerOptions {
-        // Target for broader reach
-        jvmTarget.set(JvmTarget.JVM_11)
+        optIn.addAll(
+            "kotlin.uuid.ExperimentalUuidApi",
+            "kotlinx.coroutines.ExperimentalCoroutinesApi",
+            "kotlinx.coroutines.DelicateCoroutinesApi",
+            "codes.laurence.akashic.core.AkashicInternalApi",
+        )
     }
 }
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+dependencies {
+    testImplementation(libs.findBundle("testing").get())
+    testRuntimeOnly(libs.findLibrary("junitJupiterEngine").get())
+    testRuntimeOnly(libs.findLibrary("junitPlatformLauncher").get())
+    testRuntimeOnly(libs.findLibrary("logbackClassic").get())
 }
 
 tasks.withType<Test>().configureEach {
-    // Configure all test Gradle tasks to use JUnitPlatform.
     useJUnitPlatform()
+    maxHeapSize = "1g"
+    systemProperty("junit.jupiter.execution.timeout.default", "60")
 
-    // Log information about all test results, not only the failed ones.
     testLogging {
         events(
             TestLogEvent.FAILED,

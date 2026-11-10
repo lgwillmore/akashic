@@ -3,32 +3,52 @@
 # https://docs.gradle.org/current/userguide/platforms.html#sub::toml-dependencies-format
 
 [versions]
-kotlin = "2.1.10"
-kotlinxDatetime = "0.6.1"
-kotlinxSerializationJSON = "1.7.2"
-kotlinxCoroutines = "1.8.1"
+kotlin = "2.3.20"
+kotlinxCoroutines = "1.10.2"
+kotlinxSerialization = "1.10.0"
+kotlinLogging = "7.0.14"
+exposed = "1.1.1"
+liquibase = "4.28.0"
+postgresql = "42.7.7"
+hikari = "7.0.2"
+kurrent = "1.2.1"
+junit = "5.11.4"
+junitPlatform = "1.11.4"
+assertk = "0.25"
+mockk = "1.14.2"
+logback = "1.5.24"
 foojayResolver = "0.8.0"
-exposed = "0.60.0"
 ktfmt = "0.22.0"
-kotlinLogging = "7.0.3"
 jReleaser = "1.20.0"
 
 [libraries]
 kotlinGradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
-kotlinxDatetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
-kotlinxSerialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJSON" }
-kotlinxCoroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 jReleaser = { module = "org.jreleaser:org.jreleaser.gradle.plugin", version.ref = "jReleaser" }
 
-kotlnLoggingJvm = {module = "io.github.oshai:kotlin-logging-jvm", version.ref = "kotlinLogging"}
+kotlinxCoroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+kotlinxSerializationProtobuf = { module = "org.jetbrains.kotlinx:kotlinx-serialization-protobuf", version.ref = "kotlinxSerialization" }
+kotlinLoggingJvm = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = "kotlinLogging" }
 
 exposedCore = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposed" }
+exposedJdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed" }
+exposedKotlinDatetime = { module = "org.jetbrains.exposed:exposed-kotlin-datetime", version.ref = "exposed" }
+liquibase = { module = "org.liquibase:liquibase-core", version.ref = "liquibase" }
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+hikari = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
 
-# Libraries can be bundled together for easier import
+kurrentdbClient = { module = "io.kurrent:kurrentdb-client", version.ref = "kurrent" }
+
+junitJupiterApi = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
+junitJupiterEngine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
+junitPlatformLauncher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junitPlatform" }
+assertk = { module = "com.willowtreeapps.assertk:assertk-jvm", version.ref = "assertk" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+logbackClassic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+
 [bundles]
-kotlinxEcosystem = ["kotlinxDatetime", "kotlinxSerialization", "kotlinxCoroutines"]
+testing = ["junitJupiterApi", "assertk", "mockk"]
 
 [plugins]
 kotlinPluginSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 foojayResolver = { id = "org.gradle.toolchains.foojay-resolver-convention", version.ref = "foojayResolver" }
-ktfmt = { id = "com.ncorti.ktfmt.gradle", version.ref = "ktfmt"}
+ktfmt = { id = "com.ncorti.ktfmt.gradle", version.ref = "ktfmt" }

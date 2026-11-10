@@ -1,0 +1,34 @@
+# Databases for the test suites: `docker compose up -d --wait`, then `./gradlew test`.
+# Ports are offset from the defaults so they do not collide with other local PostgreSQL or KurrentDB instances.
+# Override with AKASHIC_TEST_DB_URL / _USER / _PASSWORD and AKASHIC_TEST_KURRENT_HOST / _PORT.
+services:
+  postgres:
+    image: "postgres:16.3"
+    ports:
+      - "55432:5432"
+    environment:
+      - POSTGRES_USER=akashic
+      - POSTGRES_PASSWORD=akashic
+      - POSTGRES_DB=akashic_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U akashic -d akashic_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  kurrent:
+    image: "kurrentplatform/kurrentdb:26.1.2"
+    ports:
+      - "22113:2113"
+    environment:
+      - KURRENTDB_CLUSTER_SIZE=1
+      - KURRENTDB_RUN_PROJECTIONS=All
+      - KURRENTDB_START_STANDARD_PROJECTIONS=true
+      - KURRENTDB_NODE_PORT=2113
+      - KURRENTDB_INSECURE=true
+      - KURRENTDB_ENABLE_ATOM_PUB_OVER_HTTP=true
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:2113/health/live || exit 1"]
+      interval: 2s
+      timeout: 5s
+      retries: 30

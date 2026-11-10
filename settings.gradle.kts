@@ -25,10 +25,13 @@ plugins {
 
 include(
     ":core",
-    ":store-exposed"
+    ":backend-exposed",
+    ":backend-kurrent",
+    ":integration-tests",
 )
 
 project(":core").name = "akashic-core"
-project(":store-exposed").name = "akashic-store-exposed"
+project(":backend-exposed").name = "akashic-backend-exposed"
+project(":backend-kurrent").name = "akashic-backend-kurrent"
 
 rootProject.name = "akashic"
