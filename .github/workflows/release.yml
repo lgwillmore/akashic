@@ -78,3 +78,11 @@ jobs:
         run: |
           git push origin "refs/tags/$VERSION"
           gh release create "$VERSION" --verify-tag --generate-notes --title "$VERSION"
+
+  docs:
+    needs: release
+    uses: ./.github/workflows/docs.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write

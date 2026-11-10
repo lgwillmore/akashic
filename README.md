@@ -49,9 +49,14 @@ val counters = backend.aggregateStack(CounterDefinition) {
 val result = counters.service.handle(CounterCommand.NewCounter("counter-1", "My Counter", 0).envelope())
 ```
 
-An aggregate is declared once as an `AggregateDefinition` (its type names, decider, evolver and codec). See
-[`AGENTS.md`](AGENTS.md) for the design rules and production wiring, and the `Counter` stubs in
-`core/src/testFixtures` for a complete aggregate.
+An aggregate is declared once as an `AggregateDefinition` (its type names, decider, evolver and codec).
+
+## Documentation
+
+- [Guides](https://lgwillmore.github.io/akashic/): getting started, codecs and event evolution, subscriptions,
+  snapshots, idempotency, testing, and the PostgreSQL and KurrentDB backends.
+- [API reference](https://lgwillmore.github.io/akashic/api/).
+- [`AGENTS.md`](AGENTS.md): the design rules the framework is built to.
 
 ## Development
 
@@ -62,5 +67,9 @@ docker compose up -d --wait   # PostgreSQL on 55432, KurrentDB on 22113
 ./gradlew test
 ./gradlew ktfmtFormat         # before opening a PR
 ```
+
+The guides are a [Writerside](https://www.jetbrains.com/writerside/) project in `docs/guides`; open it with the
+Writerside plugin for IntelliJ IDEA to preview them. The code they quote lives in `docs/guides/snippets` and is
+compiled and tested by `./gradlew test`. `./gradlew dokkaGenerate` builds the API reference.
 
 Outstanding work is in [`docs/roadmap.md`](docs/roadmap.md).

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<buildprofiles xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/build-profiles.xsd"
+               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <variables>
+        <website-title>%instance% documentation</website-title>
+        <primary-color>iris</primary-color>
+        <product-web-url>https://github.com/lgwillmore/akashic</product-web-url>
+    </variables>
+    <build-profile instance="akashic">
+        <variables>
+            <noindex-content>false</noindex-content>
+        </variables>
+    </build-profile>
+    <footer>
+        <social type="github" href="https://github.com/lgwillmore/akashic">Akashic on GitHub</social>
+        <link href="https://lgwillmore.github.io/akashic/api/">API reference</link>
+        <link href="https://central.sonatype.com/namespace/codes.laurence.akashic">Maven Central</link>
+    </footer>
+</buildprofiles>
