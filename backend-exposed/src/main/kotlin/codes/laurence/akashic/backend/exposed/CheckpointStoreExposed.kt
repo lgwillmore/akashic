@@ -8,9 +8,9 @@ import kotlinx.coroutines.withContext
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.upsert
 
 class CheckpointStoreExposed<CHECKPOINT : Checkpoint>(
     private val database: Database,
@@ -20,15 +20,14 @@ class CheckpointStoreExposed<CHECKPOINT : Checkpoint>(
 
   private val checkpointsTable = SubscriptionCheckpoints(tableConfig)
 
+  /**
+   * One upsert, since every subscriber saves after each batch: a delete and an insert took a round
+   * trip more and left a dead row and two index changes behind each save.
+   */
   override suspend fun save(id: String, checkpoint: CHECKPOINT) {
     withContext(Dispatchers.IO) {
       transaction(database) {
-        checkpointsTable.deleteWhere {
-          (checkpointsTable.subscriptionId eq id) and
-              (checkpointsTable.checkpointType eq serializer.checkpointType)
-        }
-
-        checkpointsTable.insert {
+        checkpointsTable.upsert {
           it[checkpointsTable.subscriptionId] = id
           it[checkpointsTable.checkpointType] = serializer.checkpointType
           it[checkpointsTable.checkpointData] = serializer.serialize(checkpoint)

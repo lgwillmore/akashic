@@ -135,8 +135,8 @@ class SnapshotMaintainerTest {
               SnapshotStoreInMemory<CounterState, CounterState>(
                   CounterTypeNames.aggregate, CounterStateSchema))
       val maintainer = maintainer(eventStore, snapshots, SnapshotEveryNVersions(1))
-      val committed = appendEvents(eventStore).first()
-      val delivered = subscriptionEvent(0, committed)
+      val committed = appendEvents(eventStore).last()
+      val delivered = subscriptionEvent(2, committed)
       maintainer.onEvents(listOf(delivered).asBatch())
 
       maintainer.onEvents(listOf(delivered).asBatch())
@@ -170,20 +170,20 @@ class SnapshotMaintainerTest {
               CounterTypeNames.aggregate, CounterStateSchema)
       val failingStore = FailOnceSnapshotStore(snapshots)
       val maintainer = maintainer(eventStore, failingStore, SnapshotEveryNVersions(1))
-      val committed = appendEvents(eventStore).first()
-      val delivered = subscriptionEvent(0, committed)
+      val committed = appendEvents(eventStore).last()
+      val delivered = subscriptionEvent(2, committed)
 
       val failure =
           assertThrows<SnapshotMaintenanceException> {
             maintainer.onEvents(listOf(delivered).asBatch())
           }
       assertThat(failure.aggregateId).isEqualTo(AGGREGATE_ID)
-      assertThat(failure.version).isEqualTo(0)
+      assertThat(failure.version).isEqualTo(2)
       assertThat(snapshots.load(AGGREGATE_ID)).isNull()
 
       maintainer.onEvents(listOf(delivered).asBatch())
 
-      assertThat(snapshots.load(AGGREGATE_ID)?.version).isEqualTo(0)
+      assertThat(snapshots.load(AGGREGATE_ID)?.version).isEqualTo(2)
     }
   }
 
