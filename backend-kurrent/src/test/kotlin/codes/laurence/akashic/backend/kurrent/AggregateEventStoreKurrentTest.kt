@@ -21,8 +21,10 @@ import codes.laurence.akashic.core.stubs.CounterEventSerializer
 import codes.laurence.akashic.core.stubs.CounterTypeNames
 import codes.laurence.akashic.core.stubs.counterEventStartedFixture
 import io.kurrent.dbclient.KurrentDBClient
+import io.kurrent.dbclient.ReadStreamOptions
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
+import kotlin.uuid.toJavaUuid
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.jupiter.api.AfterEach
@@ -94,6 +96,50 @@ class AggregateEventStoreKurrentTest {
             .containsExactly(prepared.events.single().eventId)
         assertThat(globalBatch.map { it.committedEvent.eventId })
             .containsExactly(prepared.events.single().eventId)
+      } finally {
+        aggregateSource.close()
+        globalSource.close()
+      }
+    }
+  }
+
+  @Test
+  fun `a configured stream prefix names the stream and scopes the subscriptions`() {
+    runBlocking {
+      val prefix = "plx-${Uuid.random()}-"
+      val prefixedStore =
+          AggregateEventStoreKurrent(aggregateTypes, client, CounterEventSerializer, prefix)
+      val aggregateId = Uuid.random().toString()
+      val prepared = prepare(null, aggregateId, listOf(counterEventStartedFixture(aggregateId)))
+      prefixedStore.append(prepared)
+
+      val rawStream =
+          "$prefix${aggregateTypes.aggregate.length}-${aggregateTypes.aggregate}-$aggregateId"
+      val rawEvents = client.readStream(rawStream, ReadStreamOptions.get()).get().events
+      assertThat(rawEvents.map { it.originalEvent.eventId })
+          .containsExactly(prepared.events.single().eventId.toJavaUuid())
+      assertThat(store.readAggregateEvents(aggregateId))
+          .isInstanceOf(AggregateEventReadResult.NotFound::class)
+
+      val aggregateSource =
+          AggregateEventSubscriptionSourceKurrent(
+              aggregateTypes, client, CounterEventSerializer, streamPrefix = prefix)
+      val globalSource =
+          GlobalEventSubscriptionSourceKurrent(
+              client,
+              CounterEventSerializer,
+              EventTypeNames.Global<CounterEvent>(aggregateTypes.events),
+              streamPrefix = prefix)
+      try {
+        val aggregateBatch =
+            withTimeout(10_000) { aggregateSource.subscribeToEvents().batches.receive() }
+        val globalBatch = withTimeout(10_000) { globalSource.subscribeToEvents().batches.receive() }
+        assertThat(aggregateBatch.map { it.committedEvent.eventId })
+            .containsExactly(prepared.events.single().eventId)
+        assertThat(globalBatch.map { it.committedEvent.eventId })
+            .containsExactly(prepared.events.single().eventId)
+        assertThat(globalBatch.map { it.committedEvent.aggregateType })
+            .containsExactly(aggregateTypes.aggregate)
       } finally {
         aggregateSource.close()
         globalSource.close()

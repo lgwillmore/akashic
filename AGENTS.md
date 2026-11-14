@@ -41,8 +41,10 @@ subscriptions and checkpoints, or snapshots across the supported backends.
 - Core never depends on a backend module. A backend depends on core through `api`, since its public types implement core contracts.
 - Declarations that backends need from core but users must not rely on are public and marked `@AkashicInternalApi`
   (a `RequiresOptIn` error). The build opts every module in; keep everything else `internal` or `private`.
-- Test fixtures (`java-test-fixtures`) are shared between modules and never published: the `Counter` aggregate stubs and
-  the construction contract live in core's fixtures, the PostgreSQL and KurrentDB connection helpers in each backend's.
+- Test fixtures (`java-test-fixtures`) are shared between modules. Core's are also published, as the `akashic-core`
+  test-fixtures variant, for consumers seeding stores and subscribers in their tests; the backend fixtures are not.
+  The `Counter` aggregate stubs and the construction contract live in core's fixtures, the PostgreSQL and KurrentDB
+  connection helpers in each backend's.
 - Persisted formats: the event-ID namespace and `akashic-prepared-event-id-v1` format string (`StableEventId`, pinned
   by `StableEventIdTest`), the `akashic-` KurrentDB stream prefix, and the `event_sourcing` schema with its
   `liquibase.eventsourcing/` change sets. Nothing runs them in production yet, so change them freely and edit creation

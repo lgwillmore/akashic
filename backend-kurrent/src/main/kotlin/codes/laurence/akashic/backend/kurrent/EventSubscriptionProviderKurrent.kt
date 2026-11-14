@@ -8,9 +8,14 @@ import codes.laurence.akashic.core.event.subscription.AggregateEventSubscription
 import codes.laurence.akashic.core.event.subscription.GlobalEventSubscriptionSource
 import io.kurrent.dbclient.KurrentDBClient
 
+/**
+ * Subscription sources on one KurrentDB client. [streamPrefix] selects the streams to subscribe to
+ * and must match the prefix the event stores write with.
+ */
 class EventSubscriptionProviderKurrent(
     private val client: KurrentDBClient,
     private val subscriptionConfig: KurrentSubscriptionConfig = KurrentSubscriptionConfig(),
+    private val streamPrefix: String = DEFAULT_KURRENT_STREAM_PREFIX,
 ) : EventSubscriptionProvider<CheckpointKurrent> {
 
   override fun <EVENT : Any, EVENT_PERSISTED : Any> aggregateSubscriptionSource(
@@ -21,6 +26,7 @@ class EventSubscriptionProviderKurrent(
         client = client,
         codec = definition.eventCodec,
         subscriptionConfig = subscriptionConfig,
+        streamPrefix = streamPrefix,
     )
   }
 
@@ -33,6 +39,7 @@ class EventSubscriptionProviderKurrent(
         codec = codec,
         globalTypes = globalTypes,
         subscriptionConfig = subscriptionConfig,
+        streamPrefix = streamPrefix,
     )
   }
 }

@@ -10,11 +10,17 @@ description =
 
 kotlin { compilerOptions { optIn.add("kotlinx.serialization.ExperimentalSerializationApi") } }
 
+// Published as the `akashic-core` test-fixtures variant:
+// `testImplementation(testFixtures("codes.laurence.akashic:akashic-core:<version>"))`.
+extra["publishTestFixtures"] = true
+
 dependencies {
   api(libs.kotlinxCoroutines)
   implementation(libs.kotlinxSerializationProtobuf)
   implementation(libs.kotlinLoggingJvm)
 
   testFixturesImplementation(libs.kotlinxSerializationProtobuf)
-  testFixturesImplementation(libs.bundles.testing)
+  // The construction contract asserts with assertk; nothing else in the fixtures needs a test
+  // library.
+  testFixturesImplementation(libs.assertk)
 }

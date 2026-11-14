@@ -73,6 +73,24 @@ val backend =
 
 A small `maxBatchSize` is useful for testing how a subscriber behaves across batch boundaries.
 
+## Seed with the published test fixtures
+
+`akashic-core` publishes its test fixtures as a feature variant. Add them to the test classpath:
+
+```kotlin
+dependencies {
+    testImplementation(testFixtures("codes.laurence.akashic:akashic-core:%akashic_version%"))
+}
+```
+
+`prepareAppendFixture` prepares an append exactly as the service does, for seeding a store with history or for standing
+in for an append whose outcome was unknown. `committed` wraps any event as a `CommittedEvent`, for driving a subscriber
+with events no store wrote. Neither needs an opt-in: the fixtures carry the internal preparer's opt-in themselves.
+
+```kotlin
+```
+{src="src/test/kotlin/SeededStoreTest.kt" include-symbol="SeededStoreTest"}
+
 ## What still needs a real backend
 
 The in-memory backend proves your domain, codecs and subscribers. Keep a few tests against the real database for what

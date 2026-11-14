@@ -29,8 +29,10 @@ class AggregateEventStoreKurrent<EVENT : Any, EVENT_PERSISTED : Any>(
     private val aggregateTypes: EventTypeNames.ForAggregate<EVENT>,
     private val client: KurrentDBClient,
     private val codec: Codec<EVENT, EVENT_PERSISTED>,
+    streamPrefix: String = DEFAULT_KURRENT_STREAM_PREFIX,
 ) : AggregateEventStore<EVENT> {
   override val aggregateType: String = aggregateTypes.aggregate
+  private val streamIds = KurrentStreamId(streamPrefix)
 
   override suspend fun append(preparedAppend: PreparedAppend<EVENT>): AppendResult<EVENT> {
     validateAggregateAppend(preparedAppend)
@@ -181,5 +183,5 @@ class AggregateEventStoreKurrent<EVENT : Any, EVENT_PERSISTED : Any>(
       (this as? StreamState.StreamRevisionStreamState)?.toRawLong()
 
   private fun streamId(aggregateId: String): String =
-      KurrentStreamId.aggregate(aggregateTypes.aggregate, aggregateId)
+      streamIds.aggregate(aggregateTypes.aggregate, aggregateId)
 }

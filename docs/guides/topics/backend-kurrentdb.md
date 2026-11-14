@@ -51,6 +51,10 @@ Each aggregate has one stream, named `akashic-<length>-<aggregate type>-<aggrega
 the aggregate type. The account `acc-1` lives in `akashic-7-Account-acc-1`. The stored event type is the name from
 your `EventTypeNames`, and the command, correlation and causation references are stored as event metadata.
 
+The `akashic-` prefix is the default `streamPrefix` of `BackendProviderKurrent`, `EventStoreProviderKurrent` and
+`EventSubscriptionProviderKurrent`. Global subscriptions filter `$all` on it, so an application whose streams already
+carry another prefix passes that prefix to both providers; changing a deployment's prefix orphans its existing streams.
+
 ## How appends work
 
 A command is one `appendToStream` call to the aggregate's stream, with the prepared event IDs and the expected
