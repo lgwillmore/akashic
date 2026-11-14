@@ -12,4 +12,5 @@ dependencies {
   implementation(project(":akashic-backend-exposed"))
   implementation(project(":akashic-backend-kurrent"))
   implementation(libs.kotlinxSerializationProtobuf)
+  testImplementation(testFixtures(project(":akashic-core")))
 }

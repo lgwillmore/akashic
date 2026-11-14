@@ -1,5 +1,6 @@
 package codes.laurence.akashic.core.stubs
 
+import codes.laurence.akashic.core.AkashicInternalApi
 import codes.laurence.akashic.core.aggregate.Aggregate
 import codes.laurence.akashic.core.aggregate.AggregateChangeResult
 import codes.laurence.akashic.core.aggregate.AggregateService
@@ -47,6 +48,7 @@ fun <EVENT> EVENT.committed(
         event = this,
     )
 
+@OptIn(AkashicInternalApi::class)
 suspend fun AggregateEventStore<CounterEvent>.appendAggregateEvents(
     expectedCurrentVersion: Long?,
     aggregateId: String,
@@ -76,8 +78,11 @@ suspend fun <STATE : AggregateState, EVENT> AggregateService<STATE, CounterComma
 ): AggregateChangeResult<STATE, EVENT> = handle(command.envelope())
 
 /**
- * Canonical preparation for consumer tests that seed committed event streams or inject ambiguity.
+ * Canonical preparation for consumer tests that seed committed event streams or inject ambiguity:
+ * the [PreparedAppend] goes to [AggregateEventStore.append], or stands in for one whose outcome is
+ * unknown. The preparer stays an internal API; this fixture carries the opt-in so a test does not.
  */
+@OptIn(AkashicInternalApi::class)
 fun <EVENT : Any, PERSISTED : Any> prepareAppendFixture(
     eventTypes: EventTypeNames.ForAggregate<EVENT>,
     codec: Codec<EVENT, PERSISTED>,
@@ -86,12 +91,16 @@ fun <EVENT : Any, PERSISTED : Any> prepareAppendFixture(
     commandId: CommandId,
     occurredAt: Instant,
     events: List<EVENT>,
+    correlationId: CorrelationId? = null,
+    causedBy: EventReference? = null,
 ): PreparedAppend<EVENT> =
     EventAppendPreparer(eventTypes, codec)
         .prepare(
             aggregateId = aggregateId,
             expectedVersion = expectedVersion,
             commandId = commandId,
+            correlationId = correlationId,
+            causedBy = causedBy,
             occurredAt = occurredAt,
             events = events.proposed(),
         )

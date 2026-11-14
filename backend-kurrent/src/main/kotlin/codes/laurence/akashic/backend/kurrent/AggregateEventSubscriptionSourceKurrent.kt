@@ -18,7 +18,9 @@ class AggregateEventSubscriptionSourceKurrent<EVENT : Any, EVENT_PERSISTED : Any
     private val client: KurrentDBClient,
     private val codec: Codec<EVENT, EVENT_PERSISTED>,
     private val subscriptionConfig: KurrentSubscriptionConfig = KurrentSubscriptionConfig(),
+    streamPrefix: String = DEFAULT_KURRENT_STREAM_PREFIX,
 ) : AggregateEventSubscriptionSource<EVENT, CheckpointKurrent> {
+  private val streamIds = KurrentStreamId(streamPrefix)
   private val lifecycle =
       SubscriptionSourceLifecycle(
           Dispatchers.IO, "AggregateEventSubscriptionSourceKurrent-${aggregateTypes.aggregate}")
@@ -37,7 +39,7 @@ class AggregateEventSubscriptionSourceKurrent<EVENT : Any, EVENT_PERSISTED : Any
           applyStart(start)
           filter(
               SubscriptionFilter.newBuilder()
-                  .addStreamNamePrefix(KurrentStreamId.aggregatePrefix(aggregateTypes.aggregate))
+                  .addStreamNamePrefix(streamIds.aggregatePrefix(aggregateTypes.aggregate))
                   .build())
         }
     return kurrentSubscription(

@@ -18,7 +18,9 @@ class GlobalEventSubscriptionSourceKurrent<EVENT : Any, EVENT_PERSISTED : Any>(
     private val codec: Codec<EVENT, EVENT_PERSISTED>,
     private val globalTypes: EventTypeNames.Global<EVENT>,
     private val subscriptionConfig: KurrentSubscriptionConfig = KurrentSubscriptionConfig(),
+    streamPrefix: String = DEFAULT_KURRENT_STREAM_PREFIX,
 ) : GlobalEventSubscriptionSource<EVENT, CheckpointKurrent> {
+  private val streamIds = KurrentStreamId(streamPrefix)
   private val lifecycle =
       SubscriptionSourceLifecycle(Dispatchers.IO, "GlobalEventSubscriptionSourceKurrent")
 
@@ -38,9 +40,7 @@ class GlobalEventSubscriptionSourceKurrent<EVENT : Any, EVENT_PERSISTED : Any>(
   ): EventSubscription<EVENT, CheckpointKurrent> {
     val effectiveOptions = options ?: subscriptionConfig.options
     val subscriptionFilter =
-        SubscriptionFilter.newBuilder()
-            .addStreamNamePrefix(KurrentStreamId.allAggregatesPrefix())
-            .build()
+        SubscriptionFilter.newBuilder().addStreamNamePrefix(streamIds.allAggregatesPrefix()).build()
     val kurrentOptions =
         SubscribeToAllOptions.get().apply {
           applyStart(start)
@@ -54,7 +54,7 @@ class GlobalEventSubscriptionSourceKurrent<EVENT : Any, EVENT_PERSISTED : Any>(
         filter = filter,
         allowedEventTypes = globalTypes.events.values.toSet(),
         effectiveOptions = effectiveOptions,
-        aggregateType = { KurrentStreamId.aggregateType(it.event.streamId) })
+        aggregateType = { streamIds.aggregateType(it.event.streamId) })
   }
 
   override suspend fun close() {
