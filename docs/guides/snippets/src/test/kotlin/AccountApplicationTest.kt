@@ -91,10 +91,12 @@ class AccountApplicationTest {
       application.start()
       try {
         accounts.handle(AccountCommand.Open("Ada").forAccount("acc-1"))
+        repeat(50) { accounts.handle(AccountCommand.Deposit(1).forAccount("acc-1")) }
         val snapshots = backend.snapshotStore(AccountDefinition, AccountStateSchemaCurrent)
 
-        // AccountSnapshots takes a snapshot every 50 versions, starting with version 0.
-        waitForVersion(version = 0) { snapshots.load("acc-1")?.version }
+        // AccountSnapshots takes a snapshot every 50 versions, never at version 0: Opened is
+        // version 0 and the fiftieth deposit is version 50.
+        waitForVersion(version = 50) { snapshots.load("acc-1")?.version }
 
         val operations =
             SnapshotMaintenanceOperations(
@@ -103,7 +105,7 @@ class AccountApplicationTest {
                 eventStore = backend.aggregateStore(AccountDefinition),
                 snapshotStore = snapshots,
             )
-        assertThat(operations.verify("acc-1")).isEqualTo(SnapshotVerificationResult.Valid(0))
+        assertThat(operations.verify("acc-1")).isEqualTo(SnapshotVerificationResult.Valid(50))
       } finally {
         application.close()
       }

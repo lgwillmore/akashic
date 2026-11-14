@@ -22,8 +22,9 @@ to keep:
 ```
 {src="src/main/kotlin/AccountSnapshots.kt" include-symbol="AccountStateSchemaV1,AccountStateSchemaCurrent,AccountSnapshots"}
 
-`SnapshotEveryNVersions(50)` snapshots versions 0, 50, 100 and so on. Retention defaults to the single newest
-snapshot per aggregate (`SnapshotRetentionPolicy.MaxCount(1)`).
+`SnapshotEveryNVersions(50)` snapshots versions 50, 100, 150 and so on, never version 0: replaying a single event
+costs no more than reading a snapshot, so an aggregate that stays short writes none. Retention defaults to the single
+newest snapshot per aggregate (`SnapshotRetentionPolicy.MaxCount(1)`).
 
 Use the one `SnapshotDefinition` everywhere. The repository reads with its schema and the maintainer writes with it,
 so the two cannot drift apart.
