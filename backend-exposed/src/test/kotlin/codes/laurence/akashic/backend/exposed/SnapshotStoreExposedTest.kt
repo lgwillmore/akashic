@@ -24,12 +24,12 @@ private data class TestAggState(
 
 // Simple stub Serializer for AggregateState
 private class TestAggStateSerializer : Serializer<TestAggState> {
-  override fun serialize(value: TestAggState): ByteArray {
+  override suspend fun serialize(value: TestAggState): ByteArray {
     // naive stable encoding "aggregateId|value"
     return "${value.aggregateId}|${value.value}".toByteArray()
   }
 
-  override fun deserialize(bytes: ByteArray): TestAggState {
+  override suspend fun deserialize(bytes: ByteArray): TestAggState {
     val s = String(bytes)
     val parts = s.split("|", limit = 2)
     val (id, value) = if (parts.size == 2) parts[0] to parts[1] else s to ""

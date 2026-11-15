@@ -9,7 +9,7 @@ A subscriber declares how its position is checkpointed and handles batches of ev
 
 ```kotlin
 ```
-{src="src/main/kotlin/AccountSubscribers.kt" include-symbol="BalanceRow,AccountBalancesProjection"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/AccountSubscribers.kt" include-symbol="BalanceRow,AccountBalancesProjection"}
 
 Each `SubscriptionEvent` carries the `CommittedEvent`, with its aggregate ID, stream version, event ID, timestamps,
 and command, correlation and causation references, together with the checkpoint for its position.
@@ -32,7 +32,7 @@ A `SubscriptionRunner` connects a subscriber to a source. The backend provider b
 
 ```kotlin
 ```
-{src="src/main/kotlin/Wiring.kt" include-symbol="AccountApplication"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/Wiring.kt" include-symbol="AccountApplication"}
 
 `aggregateStack` returns the service together with a subscription source for that aggregate's events. Each runner
 reads the source independently, at its own position.
@@ -55,7 +55,7 @@ exactly once:
 
 ```kotlin
 ```
-{src="src/main/kotlin/CommandResults.kt" include-symbol="AccountAuditLog"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/CommandResults.kt" include-symbol="AccountAuditLog"}
 
 `EventSubscriberFullReplay` is a manual subscriber that always starts from the beginning, for models rebuilt in
 memory at every start.

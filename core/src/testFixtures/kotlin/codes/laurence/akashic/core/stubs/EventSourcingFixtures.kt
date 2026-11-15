@@ -83,7 +83,7 @@ suspend fun <STATE : AggregateState, EVENT> AggregateService<STATE, CounterComma
  * unknown. The preparer stays an internal API; this fixture carries the opt-in so a test does not.
  */
 @OptIn(AkashicInternalApi::class)
-fun <EVENT : Any, PERSISTED : Any> prepareAppendFixture(
+suspend fun <EVENT : Any, PERSISTED : Any> prepareAppendFixture(
     eventTypes: EventTypeNames.ForAggregate<EVENT>,
     codec: Codec<EVENT, PERSISTED>,
     aggregateId: String,

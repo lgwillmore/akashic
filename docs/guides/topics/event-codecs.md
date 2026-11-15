@@ -8,7 +8,9 @@ every event:
 
 A `Codec` joins them. It has a `Serializer`, which turns the persisted model into bytes, and a `Converter`, which maps
 between the persisted and domain models. The converter is the single place where old data meets current code, so the
-rest of the domain never deals with history.
+rest of the domain never deals with history. Both directions are `suspend` functions, so a converter may look something
+up while it works, such as an encryption key for a field. The stores call the codec outside their own database
+transactions, so a slow lookup never holds a connection.
 
 ```mermaid
 flowchart LR
@@ -40,19 +42,19 @@ sealed interface with one subclass per event.
 
 ```kotlin
 ```
-{src="src/main/kotlin/AccountCodec.kt" include-symbol="AccountEventP,AccountEventOneOfP,AccountOpenedP,AccountDepositedP,AccountWithdrawnP,AccountFlaggedP,AccountTransferSentP"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/AccountCodec.kt" include-symbol="AccountEventP,AccountEventOneOfP,AccountOpenedP,AccountDepositedP,AccountWithdrawnP,AccountFlaggedP,AccountTransferSentP"}
 
 One serializer covers every persisted model:
 
 ```kotlin
 ```
-{src="src/main/kotlin/AccountCodec.kt" include-symbol="ProtoSerializer"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/AccountCodec.kt" include-symbol="ProtoSerializer"}
 
 ## Convert between the two models
 
 ```kotlin
 ```
-{src="src/main/kotlin/AccountCodec.kt" include-symbol="AccountEventConverter,AccountEventCodec"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/AccountCodec.kt" include-symbol="AccountEventConverter,AccountEventCodec"}
 
 Both `when` expressions are exhaustive over a sealed type. Adding an event to either model fails compilation until
 the converter handles it.
@@ -83,7 +85,7 @@ registered, which would hide the event from snapshot maintenance:
 
 ```kotlin
 ```
-{src="src/main/kotlin/Account.kt" include-symbol="AccountEventTypes"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/Account.kt" include-symbol="AccountEventTypes"}
 
 ### Change an event's meaning
 
@@ -105,9 +107,9 @@ old variant, converting it to whatever the current domain model needs.
 
 ## Test the codec
 
-Converters are plain functions, so they are cheap to test. Keep a test for every evolution you make. The old shape of
-a class can live in the test:
+Converters have no framework dependencies, so they are cheap to test inside `runBlocking`. Keep a test for every
+evolution you make. The old shape of a class can live in the test:
 
 ```kotlin
 ```
-{src="src/test/kotlin/AccountCodecTest.kt" include-symbol="AccountCodecTest"}
+{src="src/test/kotlin/codes/laurence/akashic/examples/bank/AccountCodecTest.kt" include-symbol="AccountCodecTest"}

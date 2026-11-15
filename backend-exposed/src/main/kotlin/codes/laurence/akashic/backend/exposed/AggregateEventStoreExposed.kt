@@ -1,8 +1,5 @@
 package codes.laurence.akashic.backend.exposed
 
-import codes.laurence.akashic.core.aggregate.CommandId
-import codes.laurence.akashic.core.aggregate.CorrelationId
-import codes.laurence.akashic.core.aggregate.EventReference
 import codes.laurence.akashic.core.codec.Codec
 import codes.laurence.akashic.core.event.EventTypeNames
 import codes.laurence.akashic.core.event.store.AggregateEventReadResult
@@ -12,21 +9,24 @@ import codes.laurence.akashic.core.event.store.CommittedEvent
 import codes.laurence.akashic.core.event.store.PreparedAppend
 import codes.laurence.akashic.core.event.store.validateAggregateAppend
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.r2dbc.postgresql.api.PostgresqlException
+import io.r2dbc.spi.R2dbcException
 import java.sql.SQLException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.toList
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.core.dao.id.LongIdTable
 import org.jetbrains.exposed.v1.datetime.timestamp
-import org.jetbrains.exposed.v1.jdbc.Database
-import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.postgresql.util.PSQLException
+import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabase
+import org.jetbrains.exposed.v1.r2dbc.R2dbcTransaction
+import org.jetbrains.exposed.v1.r2dbc.insert
+import org.jetbrains.exposed.v1.r2dbc.selectAll
+import org.jetbrains.exposed.v1.r2dbc.transactions.suspendTransaction
 
 class AggregateEventStoreExposed<EVENT : Any, EVENT_PERSISTED : Any>(
     private val aggregateTypes: EventTypeNames.ForAggregate<EVENT>,
-    private val database: Database,
+    private val database: R2dbcDatabase,
     private val codec: Codec<EVENT, EVENT_PERSISTED>,
     tableConfig: EventTableConfig = EventTableConfig()
 ) : AggregateEventStore<EVENT> {
@@ -50,77 +50,78 @@ class AggregateEventStoreExposed<EVENT : Any, EVENT_PERSISTED : Any>(
     }
     val aggregateId = preparedAppend.aggregateId
     var transactionBodyCompleted = false
-    return try {
-      withContext(Dispatchers.IO) {
-        transaction(database) {
-          exec("SELECT pg_advisory_xact_lock($appendLockKey)")
-          val currentVersion = currentVersion(aggregateId)
+    val outcome: AppendOutcome<EVENT> =
+        try {
+          suspendTransaction(database) {
+            exec("SELECT pg_advisory_xact_lock($appendLockKey)")
+            val currentVersion = currentVersion(aggregateId)
 
-          when {
-            preparedAppend.expectedVersion == null && currentVersion != null -> {
-              return@transaction exactRetryOrConflict(preparedAppend, currentVersion)
-            }
-
-            preparedAppend.expectedVersion != null && currentVersion == null -> {
-              return@transaction AppendResult.Failure.NotFound(aggregateId)
-            }
-
-            preparedAppend.expectedVersion != null &&
-                currentVersion != preparedAppend.expectedVersion -> {
-              return@transaction exactRetryOrConflict(preparedAppend, currentVersion)
-            }
-          }
-
-          val startVersion = (currentVersion ?: -1) + 1
-          val committed =
-              preparedAppend.events.mapIndexed { index, prepared ->
-                CommittedEvent(
-                    eventId = prepared.eventId,
-                    aggregateType = aggregateTypes.aggregate,
-                    aggregateId = aggregateId,
-                    version = startVersion + index,
-                    commandId = prepared.commandId,
-                    correlationId = prepared.correlationId,
-                    causedBy = prepared.causedBy,
-                    occurredAt = prepared.occurredAt,
-                    preparedAt = prepared.preparedAt,
-                    event = prepared.event)
+            when {
+              preparedAppend.expectedVersion == null && currentVersion != null -> {
+                return@suspendTransaction exactRetryOrConflict(preparedAppend, currentVersion)
               }
-          committed.zip(preparedAppend.events).forEach { (event, prepared) ->
-            eventsTable.insert {
-              it[eventsTable.aggregateId] = aggregateId
-              it[eventsTable.aggregateType] = aggregateTypes.aggregate
-              it[eventId] = event.eventId
-              it[eventType] = prepared.eventType
-              it[eventData] = prepared.eventData
-              it[version] = event.version
-              it[eventsTable.commandId] = prepared.commandId.value
-              it[eventsTable.correlationId] = prepared.correlationId?.value
-              it[eventsTable.causedByAggregateType] = prepared.causedBy?.aggregateType
-              it[eventsTable.causedByAggregateId] = prepared.causedBy?.aggregateId
-              it[eventsTable.causedByEventId] = prepared.causedBy?.eventId
-              it[eventsTable.occurredAt] = event.occurredAt
-              it[eventsTable.preparedAt] = event.preparedAt
-            }
-          }
 
-          transactionBodyCompleted = true
-          AppendResult.Committed(
-              preparedAppend.versionBefore, preparedAppend.versionAfter, committed)
+              preparedAppend.expectedVersion != null && currentVersion == null -> {
+                return@suspendTransaction ResolvedAppend(AppendResult.Failure.NotFound(aggregateId))
+              }
+
+              preparedAppend.expectedVersion != null &&
+                  currentVersion != preparedAppend.expectedVersion -> {
+                return@suspendTransaction exactRetryOrConflict(preparedAppend, currentVersion)
+              }
+            }
+
+            val startVersion = (currentVersion ?: -1) + 1
+            val committed =
+                preparedAppend.events.mapIndexed { index, prepared ->
+                  CommittedEvent(
+                      eventId = prepared.eventId,
+                      aggregateType = aggregateTypes.aggregate,
+                      aggregateId = aggregateId,
+                      version = startVersion + index,
+                      commandId = prepared.commandId,
+                      correlationId = prepared.correlationId,
+                      causedBy = prepared.causedBy,
+                      occurredAt = prepared.occurredAt,
+                      preparedAt = prepared.preparedAt,
+                      event = prepared.event)
+                }
+            committed.zip(preparedAppend.events).forEach { (event, prepared) ->
+              eventsTable.insert {
+                it[eventsTable.aggregateId] = aggregateId
+                it[eventsTable.aggregateType] = aggregateTypes.aggregate
+                it[eventId] = event.eventId
+                it[eventType] = prepared.eventType
+                it[eventData] = prepared.eventData
+                it[version] = event.version
+                it[eventsTable.commandId] = prepared.commandId.value
+                it[eventsTable.correlationId] = prepared.correlationId?.value
+                it[eventsTable.causedByAggregateType] = prepared.causedBy?.aggregateType
+                it[eventsTable.causedByAggregateId] = prepared.causedBy?.aggregateId
+                it[eventsTable.causedByEventId] = prepared.causedBy?.eventId
+                it[eventsTable.occurredAt] = event.occurredAt
+                it[eventsTable.preparedAt] = event.preparedAt
+              }
+            }
+
+            transactionBodyCompleted = true
+            ResolvedAppend(
+                AppendResult.Committed(
+                    preparedAppend.versionBefore, preparedAppend.versionAfter, committed))
+          }
+        } catch (e: Exception) {
+          when (e.constraintName()) {
+            EVENT_VERSION_INDEX,
+            EVENT_ID_INDEX ->
+                suspendTransaction(database) {
+                  exactRetryOrConflict(preparedAppend, currentVersion(aggregateId))
+                }
+            else ->
+                ResolvedAppend(
+                    e.classifyAppendFailure(transactionBodyCompleted, preparedAppend) ?: throw e)
+          }
         }
-      }
-    } catch (e: Exception) {
-      when (e.constraintName()) {
-        EVENT_VERSION_INDEX,
-        EVENT_ID_INDEX ->
-            withContext(Dispatchers.IO) {
-              transaction(database) {
-                exactRetryOrConflict(preparedAppend, currentVersion(aggregateId))
-              }
-            }
-        else -> e.classifyAppendFailure(transactionBodyCompleted, preparedAppend) ?: throw e
-      }
-    }
+    return outcome.resolve()
   }
 
   override suspend fun readAggregateEvents(
@@ -128,52 +129,39 @@ class AggregateEventStoreExposed<EVENT : Any, EVENT_PERSISTED : Any>(
       afterVersion: Long?,
       maxCount: Long?
   ): AggregateEventReadResult<EVENT> {
-    return withContext(Dispatchers.IO) {
-      transaction(database) {
-        if (currentVersion(aggregateId) == null) {
-          AggregateEventReadResult.NotFound
-        } else {
-          val rows =
-              eventsTable
-                  .selectAll()
-                  .where {
-                    (eventsTable.aggregateType eq aggregateTypes.aggregate) and
-                        (eventsTable.aggregateId eq aggregateId) and
-                        (eventsTable.version greater (afterVersion ?: -1))
-                  }
-                  .orderBy(eventsTable.version, SortOrder.ASC)
-                  .apply { maxCount?.let { limit(it.toInt()) } }
-                  .toList()
-          AggregateEventReadResult.Found(
-              events =
-                  rows.map { row ->
-                    CommittedEvent(
-                        eventId = row[eventsTable.eventId],
-                        aggregateType = row[eventsTable.aggregateType],
-                        aggregateId = row[eventsTable.aggregateId],
-                        version = row[eventsTable.version],
-                        commandId = CommandId(row[eventsTable.commandId]),
-                        correlationId = row[eventsTable.correlationId]?.let(::CorrelationId),
-                        causedBy =
-                            row[eventsTable.causedByEventId]?.let { causedEventId ->
-                              EventReference(
-                                  aggregateType =
-                                      requireNotNull(row[eventsTable.causedByAggregateType]),
-                                  aggregateId =
-                                      requireNotNull(row[eventsTable.causedByAggregateId]),
-                                  eventId = causedEventId,
-                              )
-                            },
-                        occurredAt = row[eventsTable.occurredAt],
-                        preparedAt = row[eventsTable.preparedAt],
-                        event = codec.decode(row[eventsTable.eventData]))
-                  })
-        }
-      }
-    }
+    val stored =
+        suspendTransaction(database) {
+          if (currentVersion(aggregateId) == null) {
+            null
+          } else {
+            eventsTable
+                .selectAll()
+                .where {
+                  (eventsTable.aggregateType eq aggregateTypes.aggregate) and
+                      (eventsTable.aggregateId eq aggregateId) and
+                      (eventsTable.version greater (afterVersion ?: -1))
+                }
+                .orderBy(eventsTable.version, SortOrder.ASC)
+                .apply { maxCount?.let { limit(it.toInt()) } }
+                .map(eventsTable::storedEvent)
+                .toList()
+          }
+        } ?: return AggregateEventReadResult.NotFound
+    // Decode outside the transaction: the codec may suspend on I/O.
+    return AggregateEventReadResult.Found(events = stored.map { it.toCommittedEvent(codec) })
   }
 
-  private fun Transaction.currentVersion(id: String): Long? =
+  private suspend fun AppendOutcome<EVENT>.resolve(): AppendResult<EVENT> =
+      when (this) {
+        is ResolvedAppend -> result
+        is ExactRetryAppend ->
+            AppendResult.Committed(
+                preparedAppend.versionBefore,
+                preparedAppend.versionAfter,
+                rows.map { it.toCommittedEvent(codec) })
+      }
+
+  private suspend fun R2dbcTransaction.currentVersion(id: String): Long? =
       eventsTable
           .selectAll()
           .where {
@@ -185,10 +173,10 @@ class AggregateEventStoreExposed<EVENT : Any, EVENT_PERSISTED : Any>(
           .firstOrNull()
           ?.get(eventsTable.version)
 
-  private fun Transaction.exactRetryOrConflict(
+  private suspend fun R2dbcTransaction.exactRetryOrConflict(
       preparedAppend: PreparedAppend<EVENT>,
       actualVersion: Long?,
-  ): AppendResult<EVENT> {
+  ): AppendOutcome<EVENT> {
     val rows =
         eventsTable
             .selectAll()
@@ -202,7 +190,8 @@ class AggregateEventStoreExposed<EVENT : Any, EVENT_PERSISTED : Any>(
             .toList()
     if (rows.size != preparedAppend.events.size ||
         rows.map { it[eventsTable.eventId] } != preparedAppend.events.map { it.eventId }) {
-      return AppendResult.Failure.Conflict(preparedAppend.expectedVersion, actualVersion)
+      return ResolvedAppend(
+          AppendResult.Failure.Conflict(preparedAppend.expectedVersion, actualVersion))
     }
     check(
         rows.zip(preparedAppend.events).all { (row, prepared) ->
@@ -218,31 +207,22 @@ class AggregateEventStoreExposed<EVENT : Any, EVENT_PERSISTED : Any>(
         }) {
           "Prepared event IDs matched stored events with different content"
         }
-    return AppendResult.Committed(
-        preparedAppend.versionBefore,
-        preparedAppend.versionAfter,
-        rows.map { row ->
-          CommittedEvent(
-              eventId = row[eventsTable.eventId],
-              aggregateType = row[eventsTable.aggregateType],
-              aggregateId = row[eventsTable.aggregateId],
-              version = row[eventsTable.version],
-              commandId = CommandId(row[eventsTable.commandId]),
-              correlationId = row[eventsTable.correlationId]?.let(::CorrelationId),
-              causedBy =
-                  row[eventsTable.causedByEventId]?.let { causedEventId ->
-                    EventReference(
-                        aggregateType = requireNotNull(row[eventsTable.causedByAggregateType]),
-                        aggregateId = requireNotNull(row[eventsTable.causedByAggregateId]),
-                        eventId = causedEventId,
-                    )
-                  },
-              occurredAt = row[eventsTable.occurredAt],
-              preparedAt = row[eventsTable.preparedAt],
-              event = codec.decode(row[eventsTable.eventData]))
-        })
+    return ExactRetryAppend(preparedAppend, rows.map(eventsTable::storedEvent))
   }
 }
+
+/**
+ * What one append transaction determined. A recognized exact retry carries its stored rows out of
+ * the transaction, since decoding them may suspend.
+ */
+private sealed interface AppendOutcome<EVENT : Any>
+
+private class ResolvedAppend<EVENT : Any>(val result: AppendResult<EVENT>) : AppendOutcome<EVENT>
+
+private class ExactRetryAppend<EVENT : Any>(
+    val preparedAppend: PreparedAppend<EVENT>,
+    val rows: List<StoredEvent>,
+) : AppendOutcome<EVENT>
 
 data class EventTableConfig(
     val tableName: String = "event_sourcing.events",
@@ -289,16 +269,11 @@ class Events(config: EventTableConfig) :
   }
 }
 
-private fun Throwable.constraintName(): String? {
-  var current: Throwable? = this
-  while (current != null) {
-    (current as? PSQLException)?.serverErrorMessage?.constraint?.let {
-      return it
+/** The violated constraint, from the PostgreSQL error details anywhere in the cause chain. */
+private fun Throwable.constraintName(): String? =
+    causeChain().filterIsInstance<PostgresqlException>().firstNotNullOfOrNull {
+      it.errorDetails.constraintName.orElse(null)
     }
-    current = current.cause
-  }
-  return null
-}
 
 internal fun <EVENT> Throwable.classifyAppendFailure(
     transactionBodyCompleted: Boolean,
@@ -314,11 +289,13 @@ internal fun <EVENT> Throwable.classifyAppendFailure(
   }
 }
 
-private fun Throwable.findSqlState(): String? {
-  var current: Throwable? = this
-  while (current != null) {
-    if (current is SQLException && current.sqlState != null) return current.sqlState
-    current = current.cause
-  }
-  return null
-}
+private fun Throwable.findSqlState(): String? =
+    causeChain().firstNotNullOfOrNull {
+      when (it) {
+        is R2dbcException -> it.sqlState
+        is SQLException -> it.sqlState
+        else -> null
+      }
+    }
+
+private fun Throwable.causeChain() = generateSequence(this) { it.cause }

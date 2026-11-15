@@ -1,4 +1,4 @@
-package codes.laurence.akashic.docs
+package codes.laurence.akashic.examples.bank
 
 import codes.laurence.akashic.core.checkpoint.Checkpoint
 import codes.laurence.akashic.core.event.store.AggregateEventReadResult

@@ -23,7 +23,7 @@ The event implements `IdempotencyEvent`, and state holds a `CommandIdempotencyTr
 
 ```kotlin
 ```
-{src="src/main/kotlin/Account.kt" include-symbol="AccountEvent,AccountState"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/Account.kt" include-symbol="AccountEvent,AccountState"}
 
 The evolver applies the event to the tracker like any other event:
 
@@ -36,7 +36,7 @@ The definition tells the framework where the tracker is and how to create the ev
 
 ```kotlin
 ```
-{src="src/main/kotlin/Account.kt" include-symbol="AccountDefinition"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/Account.kt" include-symbol="AccountDefinition"}
 
 The event needs a persisted form in the codec and a name in the type registry, like every other event. If snapshots
 are on, the tracker is part of the stored state.
@@ -51,7 +51,7 @@ A `CommandIdempotency` has three parts:
 
 ```kotlin
 ```
-{src="src/main/kotlin/AccountSubscribers.kt" include-symbol="TransferProcessor"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/AccountSubscribers.kt" include-symbol="TransferProcessor"}
 
 When a command carries an identity:
 
@@ -75,7 +75,7 @@ The generation is a string you build from the checkpoint, because checkpoint typ
 
 ```kotlin
 ```
-{src="src/main/kotlin/Wiring.kt" include-symbol="postgresGeneration,kurrentGeneration"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/Wiring.kt" include-symbol="postgresGeneration,kurrentGeneration"}
 
 Deliver the generations of one group in order from one producer. A subscriber with a stable ID does this naturally.
 

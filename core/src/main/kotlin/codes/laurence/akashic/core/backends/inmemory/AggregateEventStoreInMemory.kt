@@ -118,7 +118,7 @@ class AggregateEventStoreInMemory<EVENT : Any, EVENT_PERSISTED : Any>(
     }
   }
 
-  private fun exactRetryOrConflict(
+  private suspend fun exactRetryOrConflict(
       stored: List<InMemoryStoredEventRecord>?,
       preparedAppend: PreparedAppend<EVENT>,
       actualVersion: Long?,

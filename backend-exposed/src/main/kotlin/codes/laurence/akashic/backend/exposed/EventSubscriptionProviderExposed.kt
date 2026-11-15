@@ -7,10 +7,10 @@ import codes.laurence.akashic.core.codec.Codec
 import codes.laurence.akashic.core.event.EventTypeNames
 import codes.laurence.akashic.core.event.subscription.AggregateEventSubscriptionSource
 import codes.laurence.akashic.core.event.subscription.GlobalEventSubscriptionSource
-import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabase
 
 class EventSubscriptionProviderExposed(
-    private val database: Database,
+    private val database: R2dbcDatabase,
     private val subscriptionConfig: ExposedSubscriptionConfig = ExposedSubscriptionConfig(),
     private val tableConfig: EventTableConfig = EventTableConfig(),
 ) : EventSubscriptionProvider<CheckpointLong> {

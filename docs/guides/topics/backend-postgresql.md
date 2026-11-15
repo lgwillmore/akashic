@@ -1,7 +1,7 @@
 # PostgreSQL
 
 `akashic-backend-exposed` stores events, snapshots, checkpoints and subscription leases in PostgreSQL, using
-[Exposed](https://github.com/JetBrains/Exposed) over JDBC.
+[Exposed](https://github.com/JetBrains/Exposed) over R2DBC, so no store call blocks a thread.
 
 ```kotlin
 dependencies {
@@ -9,7 +9,8 @@ dependencies {
 }
 ```
 
-It brings `akashic-core` and `exposed-jdbc` as API dependencies, and the PostgreSQL driver and Liquibase at runtime.
+It brings `akashic-core` and `exposed-r2dbc` as API dependencies, and at runtime the PostgreSQL R2DBC driver, Liquibase
+and the PostgreSQL JDBC driver that Liquibase migrates through.
 
 ## Create the tables
 
@@ -18,27 +19,32 @@ The module ships Liquibase change sets for an `event_sourcing` schema with four 
 
 ```kotlin
 ```
-{src="src/main/kotlin/Wiring.kt" include-symbol="migratePostgres"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/Wiring.kt" include-symbol="migratePostgres"}
 
 Its Liquibase bookkeeping tables are suffixed `_EVENT_SOURCING`, so it can share a database with your application's
 own Liquibase migrations.
 
 ## Build the provider
 
-`BackendProviderExposed` takes an Exposed `Database` and the lease implementation:
+`BackendProviderExposed` takes an Exposed `R2dbcDatabase` and the lease implementation:
 
 ```kotlin
 ```
-{src="src/main/kotlin/Wiring.kt" include-symbol="postgresBackend"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/Wiring.kt" include-symbol="postgresBackend"}
 
 It implements `BackendProvider<CheckpointLong>`, so `aggregateStack`, `aggregateService` and `subscriptionRunner` work
 as they do in memory:
 
 ```kotlin
 ```
-{src="src/main/kotlin/Wiring.kt" include-symbol="postgresApplication"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/Wiring.kt" include-symbol="postgresApplication"}
 
-Connect the `Database` with a pooled `DataSource` such as HikariCP.
+Connect through `r2dbc-pool` (the `r2dbc:pool:postgresql://` URL prefix), since every append, poll and lease renewal
+takes a connection from the pool for one short transaction:
+
+```kotlin
+```
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/Wiring.kt" include-symbol="connectPostgres"}
 
 ## How appends work
 
@@ -56,7 +62,7 @@ Subscriptions poll the events table. The checkpoint is the event row ID (`Checkp
 
 ```kotlin
 ```
-{src="src/main/kotlin/Wiring.kt" include-symbol="postgresBackendTuned"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/Wiring.kt" include-symbol="postgresBackendTuned"}
 
 | Setting | Default | Meaning |
 |---------|---------|---------|

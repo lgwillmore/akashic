@@ -1,4 +1,4 @@
-package codes.laurence.akashic.docs
+package codes.laurence.akashic.examples.bank
 
 import codes.laurence.akashic.core.aggregate.AggregateChangeResult
 import codes.laurence.akashic.core.aggregate.AggregateRecoveryResult

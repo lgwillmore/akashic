@@ -63,7 +63,7 @@ class GlobalEventSubscriptionSourceInMemory<EVENT : Any, EVENT_PERSISTED : Any>(
             }
 
             while (!isClosedForSend) {
-              val batch: List<SubscriptionEvent<EVENT, CheckpointLong>> =
+              val records =
                   storage.lock.withLock {
                     storage
                         .globalEventsAfter(last)
@@ -81,26 +81,28 @@ class GlobalEventSubscriptionSourceInMemory<EVENT : Any, EVENT_PERSISTED : Any>(
                           eventTypeMatch
                         }
                         .take(effectiveOptions.maxBatchSize)
-                        .map { globalRecord ->
-                          val record = globalRecord.record
-                          SubscriptionEvent(
-                              checkpoint = globalRecord.checkpoint,
-                              committedEvent =
-                                  CommittedEvent(
-                                      eventId = record.eventId,
-                                      aggregateType = record.aggregateType,
-                                      aggregateId = record.aggregateId,
-                                      version = record.version,
-                                      commandId = record.commandId,
-                                      correlationId = record.correlationId,
-                                      causedBy = record.causedBy,
-                                      occurredAt = record.occurredAt,
-                                      preparedAt = record.preparedAt,
-                                      event = codec.decode(record.eventData),
-                                  ),
-                          )
-                        }
                         .toList()
+                  }
+              // Decode outside the journal lock: the codec may suspend on I/O.
+              val batch: List<SubscriptionEvent<EVENT, CheckpointLong>> =
+                  records.map { globalRecord ->
+                    val record = globalRecord.record
+                    SubscriptionEvent(
+                        checkpoint = globalRecord.checkpoint,
+                        committedEvent =
+                            CommittedEvent(
+                                eventId = record.eventId,
+                                aggregateType = record.aggregateType,
+                                aggregateId = record.aggregateId,
+                                version = record.version,
+                                commandId = record.commandId,
+                                correlationId = record.correlationId,
+                                causedBy = record.causedBy,
+                                occurredAt = record.occurredAt,
+                                preparedAt = record.preparedAt,
+                                event = codec.decode(record.eventData),
+                            ),
+                    )
                   }
               if (batch.isNotEmpty()) {
                 status.value = EventSubscriptionStatus.CatchingUp

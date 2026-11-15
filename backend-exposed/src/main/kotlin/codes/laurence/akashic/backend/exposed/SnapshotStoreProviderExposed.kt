@@ -5,10 +5,10 @@ import codes.laurence.akashic.core.aggregate.AggregateState
 import codes.laurence.akashic.core.backends.SnapshotStoreProvider
 import codes.laurence.akashic.core.snapshot.AggregateStateSchema
 import codes.laurence.akashic.core.snapshot.SnapshotStore
-import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabase
 
 class SnapshotStoreProviderExposed(
-    private val database: Database,
+    private val database: R2dbcDatabase,
     private val tableConfig: SnapshotTableConfig = SnapshotTableConfig(),
 ) : SnapshotStoreProvider {
   override fun <STATE : AggregateState, STATE_PERSISTED : Any> snapshotStore(

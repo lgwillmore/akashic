@@ -49,4 +49,4 @@ command envelopes opts in to `kotlin.uuid.ExperimentalUuidApi`.
 
 Every code sample in these guides comes from one small bank-account application that is compiled and tested with the
 library. Its source is in
-[`docs/guides/snippets`](https://github.com/lgwillmore/akashic/tree/main/docs/guides/snippets).
+[`examples/bank-account`](https://github.com/lgwillmore/akashic/tree/main/examples/bank-account).

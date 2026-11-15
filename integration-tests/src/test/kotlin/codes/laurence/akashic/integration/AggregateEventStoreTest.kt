@@ -217,7 +217,7 @@ class AggregateEventStoreTest {
     }
   }
 
-  private fun AggregateEventStore<CounterEvent>.prepare(
+  private suspend fun AggregateEventStore<CounterEvent>.prepare(
       expectedVersion: Long?,
       aggregateId: String,
       events: List<CounterEvent>,

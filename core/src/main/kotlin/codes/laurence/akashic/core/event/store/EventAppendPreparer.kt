@@ -107,7 +107,7 @@ class EventAppendPreparer<EVENT : Any, EVENT_PERSISTED : Any>(
    * Prepares a non-empty atomic append. A null [expectedVersion] means the stream must not exist.
    * The default framework-generated [appendKey] needs no caller input.
    */
-  fun prepare(
+  suspend fun prepare(
       aggregateId: String,
       expectedVersion: Long?,
       commandId: CommandId,

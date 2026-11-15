@@ -1,12 +1,8 @@
 package codes.laurence.akashic.backend.exposed
 
-import codes.laurence.akashic.core.aggregate.CommandId
-import codes.laurence.akashic.core.aggregate.CorrelationId
-import codes.laurence.akashic.core.aggregate.EventReference
 import codes.laurence.akashic.core.checkpoint.CheckpointLong
 import codes.laurence.akashic.core.codec.Codec
 import codes.laurence.akashic.core.event.EventTypeNames
-import codes.laurence.akashic.core.event.store.CommittedEvent
 import codes.laurence.akashic.core.event.subscription.AggregateEventSubscriptionSource
 import codes.laurence.akashic.core.event.subscription.EventFilter
 import codes.laurence.akashic.core.event.subscription.EventSubscription
@@ -23,20 +19,22 @@ import kotlinx.coroutines.channels.produce
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.toList
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
 import org.jetbrains.exposed.v1.core.inList
-import org.jetbrains.exposed.v1.jdbc.Database
-import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabase
+import org.jetbrains.exposed.v1.r2dbc.selectAll
+import org.jetbrains.exposed.v1.r2dbc.transactions.suspendTransaction
 
 class AggregateEventSubscriptionSourceExposed<EVENT : Any, EVENT_PERSISTED : Any>(
     private val aggregateTypes: EventTypeNames.ForAggregate<EVENT>,
-    private val database: Database,
+    private val database: R2dbcDatabase,
     private val codec: Codec<EVENT, EVENT_PERSISTED>,
     private val subscriptionConfig: ExposedSubscriptionConfig = ExposedSubscriptionConfig(),
     tableConfig: EventTableConfig = EventTableConfig()
@@ -46,7 +44,8 @@ class AggregateEventSubscriptionSourceExposed<EVENT : Any, EVENT_PERSISTED : Any
       KotlinLogging.logger("AggregateEventSubscriptionSourceExposed.${aggregateTypes.aggregate}")
   private val lifecycle =
       SubscriptionSourceLifecycle(
-          Dispatchers.IO, "AggregateEventSubscriptionSourceExposed-${aggregateTypes.aggregate}")
+          Dispatchers.Default,
+          "AggregateEventSubscriptionSourceExposed-${aggregateTypes.aggregate}")
   private val eventsTable = Events(tableConfig)
 
   override val isClosed: Boolean
@@ -69,7 +68,7 @@ class AggregateEventSubscriptionSourceExposed<EVENT : Any, EVENT_PERSISTED : Any
                   is SubscriptionStart.FromBeginning -> 0L
                   is SubscriptionStart.AfterCheckpoint -> start.checkpoint.id
                   is SubscriptionStart.Live -> {
-                    transaction(database) {
+                    suspendTransaction(database) {
                       eventsTable
                           .selectAll()
                           .where { eventsTable.aggregateType eq aggregateTypes.aggregate }
@@ -89,60 +88,37 @@ class AggregateEventSubscriptionSourceExposed<EVENT : Any, EVENT_PERSISTED : Any
             while (!isClosedForSend) {
               try {
                 val scanned =
-                    withContext(Dispatchers.IO) {
-                      transaction(database) {
-                        eventsTable
-                            .selectAll()
-                            .where {
-                              var op: Op<Boolean> =
-                                  (eventsTable.id greater lastPosition) and
-                                      (eventsTable.aggregateType eq aggregateTypes.aggregate)
-                              filter.aggregateIds?.let { ids ->
-                                op = op and (eventsTable.aggregateId inList ids)
-                              }
-                              filter.eventTypes?.let { types ->
-                                op = op and (eventsTable.eventType inList types)
-                              }
-                              op
+                    suspendTransaction(database) {
+                      eventsTable
+                          .selectAll()
+                          .where {
+                            var op: Op<Boolean> =
+                                (eventsTable.id greater lastPosition) and
+                                    (eventsTable.aggregateType eq aggregateTypes.aggregate)
+                            filter.aggregateIds?.let { ids ->
+                              op = op and (eventsTable.aggregateId inList ids)
                             }
-                            .orderBy(eventsTable.id, SortOrder.ASC)
-                            .limit(effectiveOptions.maxBatchSize)
-                            .map { row ->
-                              val checkpoint = CheckpointLong(row[eventsTable.id].value)
-                              SubscriptionEvent(
-                                  checkpoint = checkpoint,
-                                  committedEvent =
-                                      CommittedEvent(
-                                          eventId = row[eventsTable.eventId],
-                                          aggregateType = row[eventsTable.aggregateType],
-                                          aggregateId = row[eventsTable.aggregateId],
-                                          version = row[eventsTable.version],
-                                          commandId = CommandId(row[eventsTable.commandId]),
-                                          correlationId =
-                                              row[eventsTable.correlationId]?.let(::CorrelationId),
-                                          causedBy =
-                                              row[eventsTable.causedByEventId]?.let { causedEventId
-                                                ->
-                                                EventReference(
-                                                    aggregateType =
-                                                        requireNotNull(
-                                                            row[eventsTable.causedByAggregateType]),
-                                                    aggregateId =
-                                                        requireNotNull(
-                                                            row[eventsTable.causedByAggregateId]),
-                                                    eventId = causedEventId,
-                                                )
-                                              },
-                                          occurredAt = row[eventsTable.occurredAt],
-                                          preparedAt = row[eventsTable.preparedAt],
-                                          event = codec.decode(row[eventsTable.eventData])))
+                            filter.eventTypes?.let { types ->
+                              op = op and (eventsTable.eventType inList types)
                             }
-                      }
+                            op
+                          }
+                          .orderBy(eventsTable.id, SortOrder.ASC)
+                          .limit(effectiveOptions.maxBatchSize)
+                          .map(eventsTable::storedEvent)
+                          .toList()
                     }
-                if (scanned.isNotEmpty()) {
+                // Decode outside the transaction: the codec may suspend on I/O.
+                val batch =
+                    scanned.map { stored ->
+                      SubscriptionEvent(
+                          checkpoint = CheckpointLong(stored.id),
+                          committedEvent = stored.toCommittedEvent(codec))
+                    }
+                if (batch.isNotEmpty()) {
                   status.value = EventSubscriptionStatus.CatchingUp
-                  send(scanned)
-                  lastPosition = scanned.last().checkpoint.id
+                  send(batch)
+                  lastPosition = batch.last().checkpoint.id
                 } else {
                   status.value = EventSubscriptionStatus.Live
                   delay(subscriptionConfig.pollInterval)

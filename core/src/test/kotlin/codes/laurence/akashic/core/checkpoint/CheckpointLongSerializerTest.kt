@@ -4,6 +4,7 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFailure
 import assertk.assertions.isInstanceOf
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 
 class CheckpointLongSerializerTest {
@@ -12,53 +13,63 @@ class CheckpointLongSerializerTest {
 
   @Test
   fun `serialize and deserialize checkpoint`() {
-    val checkpoint = CheckpointLong(id = 12345L)
+    runBlocking {
+      val checkpoint = CheckpointLong(id = 12345L)
 
-    val serialized = serializer.serialize(checkpoint)
-    val deserialized = serializer.deserialize(serialized)
+      val serialized = serializer.serialize(checkpoint)
+      val deserialized = serializer.deserialize(serialized)
 
-    assertThat(deserialized).isEqualTo(checkpoint)
+      assertThat(deserialized).isEqualTo(checkpoint)
+    }
   }
 
   @Test
   fun `serialize and deserialize zero checkpoint`() {
-    val checkpoint = CheckpointLong(id = 0L)
+    runBlocking {
+      val checkpoint = CheckpointLong(id = 0L)
 
-    val serialized = serializer.serialize(checkpoint)
-    val deserialized = serializer.deserialize(serialized)
+      val serialized = serializer.serialize(checkpoint)
+      val deserialized = serializer.deserialize(serialized)
 
-    assertThat(deserialized).isEqualTo(checkpoint)
+      assertThat(deserialized).isEqualTo(checkpoint)
+    }
   }
 
   @Test
   fun `serialize and deserialize negative checkpoint`() {
-    val checkpoint = CheckpointLong(id = -1L)
+    runBlocking {
+      val checkpoint = CheckpointLong(id = -1L)
 
-    val serialized = serializer.serialize(checkpoint)
-    val deserialized = serializer.deserialize(serialized)
+      val serialized = serializer.serialize(checkpoint)
+      val deserialized = serializer.deserialize(serialized)
 
-    assertThat(deserialized).isEqualTo(checkpoint)
+      assertThat(deserialized).isEqualTo(checkpoint)
+    }
   }
 
   @Test
   fun `serialize and deserialize max long checkpoint`() {
-    val checkpoint = CheckpointLong(id = Long.MAX_VALUE)
+    runBlocking {
+      val checkpoint = CheckpointLong(id = Long.MAX_VALUE)
 
-    val serialized = serializer.serialize(checkpoint)
-    val deserialized = serializer.deserialize(serialized)
+      val serialized = serializer.serialize(checkpoint)
+      val deserialized = serializer.deserialize(serialized)
 
-    assertThat(deserialized).isEqualTo(checkpoint)
+      assertThat(deserialized).isEqualTo(checkpoint)
+    }
   }
 
   @Test
   fun `checkpointType is correct`() {
-    assertThat(serializer.checkpointType).isEqualTo("Postgres")
+    runBlocking { assertThat(serializer.checkpointType).isEqualTo("Postgres") }
   }
 
   @Test
   fun `malformed checkpoint bytes fail`() {
-    assertThat { serializer.deserialize(byteArrayOf(1)) }
-        .isFailure()
-        .isInstanceOf(IllegalArgumentException::class)
+    runBlocking {
+      assertThat { serializer.deserialize(byteArrayOf(1)) }
+          .isFailure()
+          .isInstanceOf(IllegalArgumentException::class)
+    }
   }
 }

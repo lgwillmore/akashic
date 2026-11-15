@@ -13,14 +13,14 @@ A snapshot needs a stored form for the state, with the same split between persis
 
 ```kotlin
 ```
-{src="src/main/kotlin/AccountSnapshots.kt" include-symbol="AccountStateP,AccountStateConverter"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/AccountSnapshots.kt" include-symbol="AccountStateP,AccountStateConverter"}
 
 An `AggregateStateSchema` gives that codec a version name. A `SnapshotDefinition` adds when to snapshot and how many
 to keep:
 
 ```kotlin
 ```
-{src="src/main/kotlin/AccountSnapshots.kt" include-symbol="AccountStateSchemaV1,AccountStateSchemaCurrent,AccountSnapshots"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/AccountSnapshots.kt" include-symbol="AccountStateSchemaV1,AccountStateSchemaCurrent,AccountSnapshots"}
 
 `SnapshotEveryNVersions(50)` snapshots versions 50, 100, 150 and so on, never version 0: replaying a single event
 costs no more than reading a snapshot, so an aggregate that stays short writes none. Retention defaults to the single

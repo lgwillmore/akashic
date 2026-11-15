@@ -18,16 +18,16 @@ object CounterEventSerializer : Codec<CounterEvent, CounterEventDataP> {
       object : Serializer<CounterEventDataP> {
         private val protobuf = ProtoBuf {}
 
-        override fun serialize(value: CounterEventDataP): ByteArray =
+        override suspend fun serialize(value: CounterEventDataP): ByteArray =
             protobuf.encodeToByteArray(CounterEventDataP.serializer(), value)
 
-        override fun deserialize(bytes: ByteArray): CounterEventDataP =
+        override suspend fun deserialize(bytes: ByteArray): CounterEventDataP =
             protobuf.decodeFromByteArray(CounterEventDataP.serializer(), bytes)
       }
 
   override val converter: Converter<CounterEvent, CounterEventDataP> =
       object : Converter<CounterEvent, CounterEventDataP> {
-        override fun toPersisted(value: CounterEvent): CounterEventDataP =
+        override suspend fun toPersisted(value: CounterEvent): CounterEventDataP =
             CounterEventDataP(
                 when (value) {
                   is CounterEvent.IdempotencyApplied ->
@@ -47,7 +47,7 @@ object CounterEventSerializer : Codec<CounterEvent, CounterEventDataP> {
                       CounterEventDataOneOfP.IgnoredHistorical(CounterIgnoredHistoricalEventP())
                 })
 
-        override fun toDomain(value: CounterEventDataP): CounterEvent =
+        override suspend fun toDomain(value: CounterEventDataP): CounterEvent =
             when (val persisted = value.event) {
               is CounterEventDataOneOfP.IdempotencyApplied ->
                   CounterEvent.IdempotencyApplied(

@@ -16,11 +16,11 @@ data class TestCheckpoint(val position: Long) : Checkpoint
 class TestCheckpointSerializer : CheckpointSerializer<TestCheckpoint> {
   override val checkpointType = "Test"
 
-  override fun serialize(value: TestCheckpoint): ByteArray {
+  override suspend fun serialize(value: TestCheckpoint): ByteArray {
     return value.position.toString().toByteArray()
   }
 
-  override fun deserialize(bytes: ByteArray): TestCheckpoint {
+  override suspend fun deserialize(bytes: ByteArray): TestCheckpoint {
     val position = String(bytes).toLong()
     return TestCheckpoint(position)
   }
@@ -111,10 +111,10 @@ internal class CheckpointStoreExposedTest : PostgresTestCase() {
           object : CheckpointSerializer<TestCheckpoint> {
             override val checkpointType = "Other"
 
-            override fun serialize(value: TestCheckpoint): ByteArray =
+            override suspend fun serialize(value: TestCheckpoint): ByteArray =
                 value.position.toString().toByteArray()
 
-            override fun deserialize(bytes: ByteArray): TestCheckpoint =
+            override suspend fun deserialize(bytes: ByteArray): TestCheckpoint =
                 TestCheckpoint(String(bytes).toLong())
           }
       val otherCheckpointStore = CheckpointStoreExposed(database, otherCodec)

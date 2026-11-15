@@ -1,4 +1,4 @@
-package codes.laurence.akashic.docs
+package codes.laurence.akashic.examples.bank
 
 import codes.laurence.akashic.core.codec.CodecComposed
 import codes.laurence.akashic.core.codec.Converter
@@ -35,7 +35,7 @@ data class IdempotencyGenerationP(
 
 object AccountStateConverter : Converter<AccountState, AccountStateP> {
 
-  override fun toPersisted(value: AccountState) =
+  override suspend fun toPersisted(value: AccountState) =
       AccountStateP(
           accountId = value.aggregateId,
           owner = value.owner,
@@ -50,7 +50,7 @@ object AccountStateConverter : Converter<AccountState, AccountStateP> {
                     })
               })
 
-  override fun toDomain(value: AccountStateP) =
+  override suspend fun toDomain(value: AccountStateP) =
       AccountState(
           aggregateId = value.accountId,
           owner = value.owner,

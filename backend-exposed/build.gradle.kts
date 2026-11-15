@@ -6,17 +6,19 @@ plugins {
 }
 
 description =
-    "Akashic PostgreSQL backend on Exposed: events, snapshots, checkpoints, subscription leases"
+    "Akashic PostgreSQL backend on Exposed R2DBC: events, snapshots, checkpoints, subscription leases"
 
 dependencies {
   api(project(":akashic-core"))
-  api(libs.exposedJdbc)
+  api(libs.exposedR2dbc)
   implementation(libs.exposedCore)
   implementation(libs.exposedKotlinDatetime)
   implementation(libs.liquibase)
   implementation(libs.postgresql)
+  implementation(libs.r2dbcPostgresql)
   implementation(libs.kotlinLoggingJvm)
 
   testFixturesApi(testFixtures(project(":akashic-core")))
-  testFixturesImplementation(libs.hikari)
+  testFixturesImplementation(libs.r2dbcPool)
+  testFixturesImplementation(libs.junitJupiterApi)
 }

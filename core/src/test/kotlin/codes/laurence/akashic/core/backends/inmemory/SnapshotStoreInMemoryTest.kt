@@ -22,11 +22,11 @@ private data class TestAggState(
 ) : AggregateState
 
 private class TestAggStateSerializer : Serializer<TestAggState> {
-  override fun serialize(value: TestAggState): ByteArray {
+  override suspend fun serialize(value: TestAggState): ByteArray {
     return "${value.aggregateId}|${value.value}".encodeToByteArray()
   }
 
-  override fun deserialize(bytes: ByteArray): TestAggState {
+  override suspend fun deserialize(bytes: ByteArray): TestAggState {
     val s = bytes.decodeToString()
     val parts = s.split("|", limit = 2)
     val (id, value) = if (parts.size == 2) parts[0] to parts[1] else s to ""

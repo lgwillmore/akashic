@@ -12,17 +12,19 @@ import codes.laurence.akashic.core.stubs.CounterTypeNames
 import java.sql.SQLException
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 
 class AppendFailureClassificationTest {
-  private val prepared =
-      EventAppendPreparer(CounterTypeNames, CounterEventSerializer)
-          .prepare(
-              "counter",
-              null,
-              commandId = CommandId(Uuid.random().toString()),
-              occurredAt = Clock.System.now(),
-              events = listOf(ProposedEvent(CounterEvent.Started("counter", 0))))
+  private val prepared = runBlocking {
+    EventAppendPreparer(CounterTypeNames, CounterEventSerializer)
+        .prepare(
+            "counter",
+            null,
+            commandId = CommandId(Uuid.random().toString()),
+            occurredAt = Clock.System.now(),
+            events = listOf(ProposedEvent(CounterEvent.Started("counter", 0))))
+  }
 
   @Test
   fun `connection failure before transaction is definitely not committed`() {

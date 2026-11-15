@@ -10,13 +10,13 @@ data class CheckpointKurrent(val position: Position) : Checkpoint
 class CheckpointKurrentSerializer : CheckpointSerializer<CheckpointKurrent> {
   override val checkpointType: String = "Kurrent"
 
-  override fun serialize(value: CheckpointKurrent): ByteArray =
+  override suspend fun serialize(value: CheckpointKurrent): ByteArray =
       ByteBuffer.allocate(CHECKPOINT_SIZE_BYTES)
           .putLong(value.position.commitUnsigned)
           .putLong(value.position.prepareUnsigned)
           .array()
 
-  override fun deserialize(bytes: ByteArray): CheckpointKurrent {
+  override suspend fun deserialize(bytes: ByteArray): CheckpointKurrent {
     require(bytes.size == CHECKPOINT_SIZE_BYTES) {
       "Kurrent checkpoint must contain exactly $CHECKPOINT_SIZE_BYTES bytes"
     }

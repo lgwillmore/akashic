@@ -27,15 +27,16 @@ subscriptions and checkpoints, or snapshots across the supported backends.
 | Module | Artifact | Packages | Contents |
 | --- | --- | --- | --- |
 | `core` | `akashic-core` | `codes.laurence.akashic.core.*` | Aggregates, store and subscription contracts, snapshots, checkpoints, codecs, provider SPI and builders, and the in-memory backend (`core.backends.inmemory`). Depends only on kotlinx-coroutines, kotlinx-serialization and kotlin-logging. |
-| `backend-exposed` | `akashic-backend-exposed` | `codes.laurence.akashic.backend.exposed` | PostgreSQL on Exposed: events, snapshots, checkpoints, subscription leases, and the Liquibase change sets. |
+| `backend-exposed` | `akashic-backend-exposed` | `codes.laurence.akashic.backend.exposed` | PostgreSQL on Exposed R2DBC: events, snapshots, checkpoints, subscription leases, and the Liquibase change sets. |
 | `backend-kurrent` | `akashic-backend-kurrent` | `codes.laurence.akashic.backend.kurrent` | KurrentDB event streams and subscriptions. |
 | `integration-tests` | not published | `codes.laurence.akashic.integration` | Scenarios run against every backend: the shared event-store contract, subscription sources, the caching service over a shared store, and end-to-end builders. |
 
-| `docs/guides/snippets` (`:docs-snippets`) | not published | `codes.laurence.akashic.docs` | The bank-account application the guides quote, with its tests on the in-memory backend. |
+| `examples/bank-account` (`:example-bank-account`) | not published | `codes.laurence.akashic.examples.bank` | The bank-account application the guides quote, runnable on any backend, with its tests on the in-memory backend. |
 
-- The guides are a Writerside project in `docs/guides` (`topics/*.md`, `akashic.tree`). Topics quote
-  `docs/guides/snippets` by symbol name (`include-symbol`), so renaming a quoted declaration there means updating the
-  topic. Change a guide's code in the snippets module, never inline in the topic, and keep prose claims in step with
+- The guides are a Writerside project in `docs/guides` (`topics/*.md`, `akashic.tree`). Topics quote the example
+  application by symbol name (`include-symbol`) through the `docs/guides/snippets` symlink to `examples/bank-account`,
+  because Writerside reads snippets only from inside its module. Renaming a quoted declaration means updating the
+  topic. Change a guide's code in the example module, never inline in the topic, and keep prose claims in step with
   the library. The Docs workflow builds the guides and the Dokka API reference and publishes both to GitHub Pages on
   each release.
 - Core never depends on a backend module. A backend depends on core through `api`, since its public types implement core contracts.
@@ -156,6 +157,9 @@ subscriptions and checkpoints, or snapshots across the supported backends.
 
 - Use total `Serializer<T>` implementations for snapshots and checkpoints. Deserialization returns one
   value or throws; snapshot fallback and rebuild are store policies, not serializer results.
+- `Codec`, `Converter` and `Serializer` suspend in both directions so a codec may perform I/O, such as resolving
+  per-subject encryption keys. Stores read rows inside their transaction and call the codec after it returns; never
+  call the codec inside a blocking JDBC transaction or a client callback thread.
 - Events use `EventCodec<PERSISTED, DOMAIN>` so stable persisted schemas and current domain events are
   explicit, independently evolvable models. Keep serialization and conversion independently testable.
 - Every persisted event converts to exactly one domain event. Map recognized obsolete variants to a
@@ -321,6 +325,9 @@ val service = AggregateServiceReloading(repository)
 
 ## Testing
 
+- The Exposed backend runs on `exposed-r2dbc` with `r2dbc-postgresql`; nothing in a store blocks a thread. Liquibase
+  migrations stay on JDBC. The test fixture `databasePostgres()` gives each test a small pool that evicts idle
+  connections, and `PostgresTestCase` closes it after each test; call `closePool()` on databases created elsewhere.
 - `backend-exposed`, `backend-kurrent` and `integration-tests` need PostgreSQL and KurrentDB: start them with
   `docker compose up -d --wait` (ports 55432 and 22113, overridable with the `AKASHIC_TEST_*` variables in
   `docker-compose.yml`). Core tests need nothing. Run one module with e.g. `./gradlew :akashic-core:test`.

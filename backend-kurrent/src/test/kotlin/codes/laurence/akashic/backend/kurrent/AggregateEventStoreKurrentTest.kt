@@ -147,7 +147,7 @@ class AggregateEventStoreKurrentTest {
     }
   }
 
-  private fun prepare(
+  private suspend fun prepare(
       expectedVersion: Long?,
       aggregateId: String,
       events: List<CounterEvent>,

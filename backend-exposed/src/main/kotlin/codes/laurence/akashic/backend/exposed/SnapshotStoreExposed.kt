@@ -7,20 +7,22 @@ import codes.laurence.akashic.core.snapshot.Snapshot
 import codes.laurence.akashic.core.snapshot.SnapshotRetentionPolicy
 import codes.laurence.akashic.core.snapshot.SnapshotStore
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlin.time.Instant
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.toList
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.datetime.timestamp
-import org.jetbrains.exposed.v1.jdbc.Database
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.upsert
+import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabase
+import org.jetbrains.exposed.v1.r2dbc.R2dbcTransaction
+import org.jetbrains.exposed.v1.r2dbc.deleteWhere
+import org.jetbrains.exposed.v1.r2dbc.selectAll
+import org.jetbrains.exposed.v1.r2dbc.transactions.suspendTransaction
+import org.jetbrains.exposed.v1.r2dbc.upsert
 
 class SnapshotStoreExposed<STATE : AggregateState, STATE_PERSISTED : Any>(
     private val aggregateType: String,
-    private val database: Database,
+    private val database: R2dbcDatabase,
     private val stateSchema: AggregateStateSchema<STATE, STATE_PERSISTED>,
     tableConfig: SnapshotTableConfig = SnapshotTableConfig(),
 ) : SnapshotStore<STATE> {
@@ -28,8 +30,8 @@ class SnapshotStoreExposed<STATE : AggregateState, STATE_PERSISTED : Any>(
   private val snapshotsTable = SnapshotsTable(tableConfig)
   private val logger = KotlinLogging.logger {}
 
-  private suspend fun <T> asyncTransaction(block: () -> T): T =
-      withContext(Dispatchers.IO) { transaction(database) { block() } }
+  private suspend fun <T> asyncTransaction(block: suspend R2dbcTransaction.() -> T): T =
+      suspendTransaction(database, statement = block)
 
   override suspend fun save(snapshot: Snapshot<STATE>, retention: SnapshotRetentionPolicy) {
     require(snapshot.aggregateType == aggregateType) {
@@ -41,6 +43,8 @@ class SnapshotStoreExposed<STATE : AggregateState, STATE_PERSISTED : Any>(
     require(snapshot.aggregateStateSchemaVersion == stateSchema.version) {
       "Snapshot schema ${snapshot.aggregateStateSchemaVersion} does not match ${stateSchema.version}"
     }
+    // Encode before the transaction: the codec may suspend on I/O.
+    val encodedState = stateSchema.stateCodec.encode(snapshot.state)
     asyncTransaction {
       snapshotsTable.upsert {
         it[aggregateType] = this@SnapshotStoreExposed.aggregateType
@@ -50,7 +54,7 @@ class SnapshotStoreExposed<STATE : AggregateState, STATE_PERSISTED : Any>(
         it[sourceEventOccurredAt] = snapshot.sourceEventOccurredAt
         it[sourceEventPreparedAt] = snapshot.sourceEventPreparedAt
         it[generatedAt] = snapshot.generatedAt
-        it[snapshotData] = stateSchema.stateCodec.encode(snapshot.state)
+        it[snapshotData] = encodedState
       }
       when (retention) {
         is SnapshotRetentionPolicy.MaxCount -> {
@@ -66,6 +70,7 @@ class SnapshotStoreExposed<STATE : AggregateState, STATE_PERSISTED : Any>(
                   .orderBy(snapshotsTable.version, SortOrder.DESC)
                   .limit(retention.count)
                   .map { it[snapshotsTable.version] }
+                  .toList()
           snapshotsTable.deleteWhere {
             (snapshotsTable.aggregateType eq this@SnapshotStoreExposed.aggregateType) and
                 (snapshotsTable.aggregateId eq snapshot.aggregateId) and
@@ -92,43 +97,64 @@ class SnapshotStoreExposed<STATE : AggregateState, STATE_PERSISTED : Any>(
   private suspend fun loadNewest(
       aggregateId: String,
       versionExclusive: Long?,
-  ): Snapshot<STATE>? = asyncTransaction {
-    val versionFilter = versionExclusive?.let { snapshotsTable.version less it } ?: Op.TRUE
-    val rows =
-        snapshotsTable
-            .selectAll()
-            .where {
-              (snapshotsTable.aggregateType eq this@SnapshotStoreExposed.aggregateType) and
-                  (snapshotsTable.aggregateId eq aggregateId) and
-                  (snapshotsTable.aggregateStateSchemaVersion eq stateSchema.version.value) and
-                  versionFilter
-            }
-            .orderBy(snapshotsTable.version, SortOrder.DESC)
-            .toList()
+  ): Snapshot<STATE>? {
+    val rows = asyncTransaction {
+      val versionFilter = versionExclusive?.let { snapshotsTable.version less it } ?: Op.TRUE
+      snapshotsTable
+          .selectAll()
+          .where {
+            (snapshotsTable.aggregateType eq this@SnapshotStoreExposed.aggregateType) and
+                (snapshotsTable.aggregateId eq aggregateId) and
+                (snapshotsTable.aggregateStateSchemaVersion eq stateSchema.version.value) and
+                versionFilter
+          }
+          .orderBy(snapshotsTable.version, SortOrder.DESC)
+          .map { row ->
+            StoredSnapshot(
+                aggregateId = row[snapshotsTable.aggregateId],
+                version = row[snapshotsTable.version],
+                sourceEventOccurredAt = row[snapshotsTable.sourceEventOccurredAt],
+                sourceEventPreparedAt = row[snapshotsTable.sourceEventPreparedAt],
+                generatedAt = row[snapshotsTable.generatedAt],
+                snapshotData = row[snapshotsTable.snapshotData])
+          }
+          .toList()
+    }
+    // Decode outside the transaction: the codec may suspend on I/O.
     for (row in rows) {
       val state =
           try {
-            stateSchema.stateCodec.decode(row[snapshotsTable.snapshotData])
+            stateSchema.stateCodec.decode(row.snapshotData)
           } catch (e: CancellationException) {
             throw e
           } catch (e: Exception) {
             logger.warn(e) {
-              "Ignoring unreadable $aggregateType snapshot for $aggregateId at version ${row[snapshotsTable.version]}"
+              "Ignoring unreadable $aggregateType snapshot for $aggregateId at version ${row.version}"
             }
             continue
           }
-      return@asyncTransaction Snapshot(
+      return Snapshot(
           aggregateType = aggregateType,
-          aggregateId = row[snapshotsTable.aggregateId],
-          version = row[snapshotsTable.version],
+          aggregateId = row.aggregateId,
+          version = row.version,
           aggregateStateSchemaVersion = stateSchema.version,
-          sourceEventOccurredAt = row[snapshotsTable.sourceEventOccurredAt],
-          sourceEventPreparedAt = row[snapshotsTable.sourceEventPreparedAt],
-          generatedAt = row[snapshotsTable.generatedAt],
+          sourceEventOccurredAt = row.sourceEventOccurredAt,
+          sourceEventPreparedAt = row.sourceEventPreparedAt,
+          generatedAt = row.generatedAt,
           state = state)
     }
-    null
+    return null
   }
+
+  /** One snapshot row, read inside the transaction and decoded after it. */
+  private class StoredSnapshot(
+      val aggregateId: String,
+      val version: Long,
+      val sourceEventOccurredAt: Instant,
+      val sourceEventPreparedAt: Instant,
+      val generatedAt: Instant,
+      val snapshotData: ByteArray,
+  )
 
   override suspend fun delete(
       aggregateId: String,

@@ -7,10 +7,11 @@ kotlin = "2.3.20"
 kotlinxCoroutines = "1.10.2"
 kotlinxSerialization = "1.10.0"
 kotlinLogging = "7.0.14"
-exposed = "1.1.1"
+exposed = "1.6.1"
+r2dbcPostgresql = "1.1.3.RELEASE"
+r2dbcPool = "1.0.2.RELEASE"
 liquibase = "4.28.0"
 postgresql = "42.7.7"
-hikari = "7.0.2"
 kurrent = "1.2.1"
 junit = "5.11.4"
 junitPlatform = "1.11.4"
@@ -33,10 +34,12 @@ kotlinLoggingJvm = { module = "io.github.oshai:kotlin-logging-jvm", version.ref 
 
 exposedCore = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposed" }
 exposedJdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed" }
+exposedR2dbc = { module = "org.jetbrains.exposed:exposed-r2dbc", version.ref = "exposed" }
+r2dbcPostgresql = { module = "org.postgresql:r2dbc-postgresql", version.ref = "r2dbcPostgresql" }
+r2dbcPool = { module = "io.r2dbc:r2dbc-pool", version.ref = "r2dbcPool" }
 exposedKotlinDatetime = { module = "org.jetbrains.exposed:exposed-kotlin-datetime", version.ref = "exposed" }
 liquibase = { module = "org.liquibase:liquibase-core", version.ref = "liquibase" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
-hikari = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
 
 kurrentdbClient = { module = "io.kurrent:kurrentdb-client", version.ref = "kurrent" }
 

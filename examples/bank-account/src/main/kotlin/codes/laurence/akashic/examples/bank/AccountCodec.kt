@@ -1,4 +1,4 @@
-package codes.laurence.akashic.docs
+package codes.laurence.akashic.examples.bank
 
 import codes.laurence.akashic.core.codec.CodecComposed
 import codes.laurence.akashic.core.codec.Converter
@@ -15,9 +15,11 @@ import kotlinx.serialization.protobuf.ProtoOneOf
 
 /** Protobuf bytes for any `@Serializable` persisted model. */
 class ProtoSerializer<T>(private val serializer: KSerializer<T>) : Serializer<T> {
-  override fun serialize(value: T): ByteArray = ProtoBuf.encodeToByteArray(serializer, value)
+  override suspend fun serialize(value: T): ByteArray =
+      ProtoBuf.encodeToByteArray(serializer, value)
 
-  override fun deserialize(bytes: ByteArray): T = ProtoBuf.decodeFromByteArray(serializer, bytes)
+  override suspend fun deserialize(bytes: ByteArray): T =
+      ProtoBuf.decodeFromByteArray(serializer, bytes)
 }
 
 @Serializable data class AccountEventP(@ProtoOneOf val event: AccountEventOneOfP)
@@ -80,7 +82,7 @@ fun CommandIdempotencyP.toDomain() =
 
 object AccountEventConverter : Converter<AccountEvent, AccountEventP> {
 
-  override fun toPersisted(value: AccountEvent): AccountEventP =
+  override suspend fun toPersisted(value: AccountEvent): AccountEventP =
       AccountEventP(
           when (value) {
             is AccountEvent.Opened -> AccountEventOneOfP.Opened(AccountOpenedP(value.owner))
@@ -98,7 +100,7 @@ object AccountEventConverter : Converter<AccountEvent, AccountEventP> {
                     "Retired events are read from history, never written")
           })
 
-  override fun toDomain(value: AccountEventP): AccountEvent =
+  override suspend fun toDomain(value: AccountEventP): AccountEvent =
       when (val persisted = value.event) {
         is AccountEventOneOfP.Opened -> AccountEvent.Opened(owner = persisted.value.ownerName)
         is AccountEventOneOfP.Deposited ->

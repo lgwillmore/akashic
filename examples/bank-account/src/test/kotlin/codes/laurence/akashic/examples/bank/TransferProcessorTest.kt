@@ -1,4 +1,4 @@
-package codes.laurence.akashic.docs
+package codes.laurence.akashic.examples.bank
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
