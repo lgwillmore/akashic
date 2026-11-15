@@ -9,10 +9,10 @@ import codes.laurence.akashic.core.backends.SubscriptionOwnershipProvider
 import codes.laurence.akashic.core.checkpoint.CheckpointLong
 import codes.laurence.akashic.core.checkpoint.CheckpointLongSerializer
 import codes.laurence.akashic.core.checkpoint.CheckpointSerializer
-import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabase
 
 class BackendProviderExposed(
-    database: Database,
+    database: R2dbcDatabase,
     subscriptionConfig: ExposedSubscriptionConfig = ExposedSubscriptionConfig(),
     eventTableConfig: EventTableConfig = EventTableConfig(),
     snapshotTableConfig: SnapshotTableConfig = SnapshotTableConfig(),

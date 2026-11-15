@@ -1,21 +1,27 @@
 package codes.laurence.akashic.core.codec
 
-/** Encodes a domain model through an independently evolvable persisted representation. */
+/**
+ * Encodes a domain model through an independently evolvable persisted representation.
+ *
+ * Both directions suspend so a codec may perform I/O, such as resolving per-subject encryption keys
+ * while sealing or opening personal data. Stores call the codec outside their own database
+ * transactions, so a suspending codec never holds a connection open.
+ */
 interface Codec<DOMAIN : Any, PERSISTED : Any> {
   val serializer: Serializer<PERSISTED>
 
   val converter: Converter<DOMAIN, PERSISTED>
 
-  fun encode(value: DOMAIN): ByteArray = serializer.serialize(converter.toPersisted(value))
+  suspend fun encode(value: DOMAIN): ByteArray = serializer.serialize(converter.toPersisted(value))
 
-  fun decode(bytes: ByteArray): DOMAIN = converter.toDomain(serializer.deserialize(bytes))
+  suspend fun decode(bytes: ByteArray): DOMAIN = converter.toDomain(serializer.deserialize(bytes))
 }
 
 /** Converts between a stable persisted model and its current domain model. */
 interface Converter<DOMAIN : Any, PERSISTED : Any> {
-  fun toPersisted(value: DOMAIN): PERSISTED
+  suspend fun toPersisted(value: DOMAIN): PERSISTED
 
-  fun toDomain(value: PERSISTED): DOMAIN
+  suspend fun toDomain(value: PERSISTED): DOMAIN
 }
 
 /** Default [Codec] assembled from a serializer and converter. */
@@ -33,8 +39,8 @@ class CodecComposed<DOMAIN : Any, PERSISTED : Any>(
 class DirectCodec<VALUE : Any>(override val serializer: Serializer<VALUE>) : Codec<VALUE, VALUE> {
   override val converter =
       object : Converter<VALUE, VALUE> {
-        override fun toPersisted(value: VALUE): VALUE = value
+        override suspend fun toPersisted(value: VALUE): VALUE = value
 
-        override fun toDomain(value: VALUE): VALUE = value
+        override suspend fun toDomain(value: VALUE): VALUE = value
       }
 }

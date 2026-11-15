@@ -9,7 +9,7 @@ Deciders and evolvers are plain functions of their inputs. Most domain rules can
 
 ```kotlin
 ```
-{src="src/test/kotlin/AccountDeciderTest.kt" include-symbol="AccountDeciderTest"}
+{src="src/test/kotlin/codes/laurence/akashic/examples/bank/AccountDeciderTest.kt" include-symbol="AccountDeciderTest"}
 
 ## Test command handling
 
@@ -18,7 +18,7 @@ so creating one per test class isolates tests from each other:
 
 ```kotlin
 ```
-{src="src/test/kotlin/AccountServiceTest.kt" include-symbol="AccountServiceTest"}
+{src="src/test/kotlin/codes/laurence/akashic/examples/bank/AccountServiceTest.kt" include-symbol="AccountServiceTest"}
 
 Handling goes through the real codec, so a converter that loses a field fails here as well as in codec tests.
 
@@ -29,7 +29,7 @@ same batch is the simplest test of replay safety:
 
 ```kotlin
 ```
-{src="src/test/kotlin/TransferProcessorTest.kt" include-symbol="TransferProcessorTest"}
+{src="src/test/kotlin/codes/laurence/akashic/examples/bank/TransferProcessorTest.kt" include-symbol="TransferProcessorTest"}
 
 ## Test the whole application
 
@@ -37,7 +37,7 @@ Write the application against `BackendProvider`, and a test can run all of it, r
 
 ```kotlin
 ```
-{src="src/test/kotlin/AccountApplicationTest.kt" include-symbol="AccountApplicationTest"}
+{src="src/test/kotlin/codes/laurence/akashic/examples/bank/AccountApplicationTest.kt" include-symbol="AccountApplicationTest"}
 
 Subscriptions are asynchronous, so these tests wait for an observable result. `waitForVersion` polls every 10
 milliseconds and fails after 10 seconds. The in-memory source polls for new events every 5 milliseconds.
@@ -89,7 +89,7 @@ with events no store wrote. Neither needs an opt-in: the fixtures carry the inte
 
 ```kotlin
 ```
-{src="src/test/kotlin/SeededStoreTest.kt" include-symbol="SeededStoreTest"}
+{src="src/test/kotlin/codes/laurence/akashic/examples/bank/SeededStoreTest.kt" include-symbol="SeededStoreTest"}
 
 ## What still needs a real backend
 

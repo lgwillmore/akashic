@@ -22,6 +22,7 @@ message routing stay in your application, built on those contracts.
 |----------|----------|
 | `codes.laurence.akashic:akashic-core` | Contracts, aggregate services, subscriptions, snapshots, and the in-memory backend |
 | `codes.laurence.akashic:akashic-backend-exposed` | PostgreSQL backend on Exposed, with Liquibase migrations |
+| `codes.laurence.akashic:akashic-crypto` | Cryptographic shredding of personal data: sealed fields and subject key SPIs |
 | `codes.laurence.akashic:akashic-backend-kurrent` | KurrentDB backend |
 
 ```kotlin
@@ -49,4 +50,4 @@ command envelopes opts in to `kotlin.uuid.ExperimentalUuidApi`.
 
 Every code sample in these guides comes from one small bank-account application that is compiled and tested with the
 library. Its source is in
-[`docs/guides/snippets`](https://github.com/lgwillmore/akashic/tree/main/docs/guides/snippets).
+[`examples/bank-account`](https://github.com/lgwillmore/akashic/tree/main/examples/bank-account).

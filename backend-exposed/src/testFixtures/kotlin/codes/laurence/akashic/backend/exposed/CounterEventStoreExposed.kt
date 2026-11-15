@@ -5,12 +5,12 @@ import codes.laurence.akashic.core.stubs.CounterEventDataP
 import codes.laurence.akashic.core.stubs.CounterEventSerializer
 import codes.laurence.akashic.core.stubs.CounterTypeNames
 import codes.laurence.akashic.core.stubs.randString
-import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabase
 
 typealias CounterEventStoreExposed = AggregateEventStoreExposed<CounterEvent, CounterEventDataP>
 
 fun counterEventStoreExposed(
-    database: Database,
+    database: R2dbcDatabase,
     typeName: String = randString()
 ): CounterEventStoreExposed {
   return AggregateEventStoreExposed(

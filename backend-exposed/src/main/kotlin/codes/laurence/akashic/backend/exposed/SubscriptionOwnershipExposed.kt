@@ -9,20 +9,20 @@ import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.firstOrNull
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.datetime.timestamp
-import org.jetbrains.exposed.v1.jdbc.Database
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.update
+import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabase
+import org.jetbrains.exposed.v1.r2dbc.R2dbcTransaction
+import org.jetbrains.exposed.v1.r2dbc.deleteWhere
+import org.jetbrains.exposed.v1.r2dbc.insert
+import org.jetbrains.exposed.v1.r2dbc.selectAll
+import org.jetbrains.exposed.v1.r2dbc.transactions.suspendTransaction
+import org.jetbrains.exposed.v1.r2dbc.update
 
 /** PostgreSQL leases providing one active runner per stable automatic subscriber ID. */
 class SubscriptionOwnershipExposed(
-    private val database: Database,
+    private val database: R2dbcDatabase,
     private val instanceId: String = Uuid.random().toString(),
     private val leaseDuration: Duration = 30.seconds,
     private val renewalInterval: Duration = leaseDuration / 3,
@@ -51,8 +51,8 @@ class SubscriptionOwnershipExposed(
   }
 
   private suspend fun claim(subscriptionId: String, leaseOwnerId: String) {
-    withContext(Dispatchers.IO) {
-      transaction(database) {
+    run {
+      suspendTransaction(database) {
         val now = Clock.System.now()
         val existing = lockedLease(subscriptionId)
         if (existing == null) {
@@ -61,7 +61,7 @@ class SubscriptionOwnershipExposed(
             it[leases.ownerId] = leaseOwnerId
             it[expiresAt] = now + leaseDuration
           }
-          return@transaction
+          return@suspendTransaction
         }
 
         val currentOwner = existing[leases.ownerId]
@@ -75,8 +75,8 @@ class SubscriptionOwnershipExposed(
   }
 
   private suspend fun renew(subscriptionId: String, leaseOwnerId: String) {
-    withContext(Dispatchers.IO) {
-      transaction(database) {
+    run {
+      suspendTransaction(database) {
         val now = Clock.System.now()
         val existing = lockedLease(subscriptionId)
         val currentOwner = existing?.get(leases.ownerId)
@@ -90,8 +90,8 @@ class SubscriptionOwnershipExposed(
   }
 
   private suspend fun release(subscriptionId: String, leaseOwnerId: String) {
-    withContext(Dispatchers.IO) {
-      transaction(database) {
+    run {
+      suspendTransaction(database) {
         leases.deleteWhere {
           (leases.subscriptionId eq subscriptionId) and (leases.ownerId eq leaseOwnerId)
         }
@@ -99,10 +99,10 @@ class SubscriptionOwnershipExposed(
     }
   }
 
-  private fun Transaction.lockedLease(subscriptionId: String): ResultRow? =
+  private suspend fun R2dbcTransaction.lockedLease(subscriptionId: String): ResultRow? =
       leases.selectAll().where { leases.subscriptionId eq subscriptionId }.forUpdate().firstOrNull()
 
-  private fun Transaction.updateLease(
+  private suspend fun R2dbcTransaction.updateLease(
       subscriptionId: String,
       leaseOwnerId: String,
       expiry: kotlin.time.Instant,

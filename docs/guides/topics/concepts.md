@@ -73,14 +73,14 @@ without being able to change anything.
 
 ```kotlin
 ```
-{src="src/main/kotlin/AccountReadOnly.kt" include-symbol="accountAsOf"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/AccountReadOnly.kt" include-symbol="accountAsOf"}
 
 **Read models.** A subscriber can fold delivered events with the aggregate's own evolver, so a read model never
 restates the domain's arithmetic:
 
 ```kotlin
 ```
-{src="src/main/kotlin/AccountReadOnly.kt" include-symbol="AccountDirectory"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/AccountReadOnly.kt" include-symbol="AccountDirectory"}
 
 **Snapshots.** The snapshot maintainer is exactly this: a subscriber that folds events with the evolver and stores
 the result. It is built from the evolver alone and has no access to the decider.

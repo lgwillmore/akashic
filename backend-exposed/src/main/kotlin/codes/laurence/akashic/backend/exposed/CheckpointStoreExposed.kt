@@ -3,17 +3,16 @@ package codes.laurence.akashic.backend.exposed
 import codes.laurence.akashic.core.checkpoint.Checkpoint
 import codes.laurence.akashic.core.checkpoint.CheckpointSerializer
 import codes.laurence.akashic.core.checkpoint.CheckpointStore
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.firstOrNull
 import org.jetbrains.exposed.v1.core.*
-import org.jetbrains.exposed.v1.jdbc.Database
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.upsert
+import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabase
+import org.jetbrains.exposed.v1.r2dbc.deleteWhere
+import org.jetbrains.exposed.v1.r2dbc.selectAll
+import org.jetbrains.exposed.v1.r2dbc.transactions.suspendTransaction
+import org.jetbrains.exposed.v1.r2dbc.upsert
 
 class CheckpointStoreExposed<CHECKPOINT : Checkpoint>(
-    private val database: Database,
+    private val database: R2dbcDatabase,
     private val serializer: CheckpointSerializer<CHECKPOINT>,
     tableConfig: CheckpointTableConfig = CheckpointTableConfig()
 ) : CheckpointStore<CHECKPOINT> {
@@ -25,42 +24,38 @@ class CheckpointStoreExposed<CHECKPOINT : Checkpoint>(
    * trip more and left a dead row and two index changes behind each save.
    */
   override suspend fun save(id: String, checkpoint: CHECKPOINT) {
-    withContext(Dispatchers.IO) {
-      transaction(database) {
-        checkpointsTable.upsert {
-          it[checkpointsTable.subscriptionId] = id
-          it[checkpointsTable.checkpointType] = serializer.checkpointType
-          it[checkpointsTable.checkpointData] = serializer.serialize(checkpoint)
-        }
+    // Serialize before the transaction: the serializer may suspend on I/O.
+    val data = serializer.serialize(checkpoint)
+    suspendTransaction(database) {
+      checkpointsTable.upsert {
+        it[checkpointsTable.subscriptionId] = id
+        it[checkpointsTable.checkpointType] = serializer.checkpointType
+        it[checkpointsTable.checkpointData] = data
       }
     }
   }
 
   override suspend fun load(id: String): CHECKPOINT? {
-    return withContext(Dispatchers.IO) {
-      transaction(database) {
-        checkpointsTable
-            .selectAll()
-            .where {
-              (checkpointsTable.subscriptionId eq id) and
-                  (checkpointsTable.checkpointType eq serializer.checkpointType)
-            }
-            .firstOrNull()
-            ?.let { row ->
-              val data = row[checkpointsTable.checkpointData]
-              serializer.deserialize(data)
-            }
-      }
-    }
+    val data =
+        suspendTransaction(database) {
+          checkpointsTable
+              .selectAll()
+              .where {
+                (checkpointsTable.subscriptionId eq id) and
+                    (checkpointsTable.checkpointType eq serializer.checkpointType)
+              }
+              .firstOrNull()
+              ?.get(checkpointsTable.checkpointData)
+        }
+    // Deserialize outside the transaction: the serializer may suspend on I/O.
+    return data?.let { serializer.deserialize(it) }
   }
 
   override suspend fun delete(id: String) {
-    withContext(Dispatchers.IO) {
-      transaction(database) {
-        checkpointsTable.deleteWhere {
-          (checkpointsTable.subscriptionId eq id) and
-              (checkpointsTable.checkpointType eq serializer.checkpointType)
-        }
+    suspendTransaction(database) {
+      checkpointsTable.deleteWhere {
+        (checkpointsTable.subscriptionId eq id) and
+            (checkpointsTable.checkpointType eq serializer.checkpointType)
       }
     }
   }

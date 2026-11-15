@@ -16,11 +16,11 @@ private data class TestCheckpoint(val position: Long) : Checkpoint
 private class TestCheckpointSerializer : CheckpointSerializer<TestCheckpoint> {
   override val checkpointType = "Test"
 
-  override fun serialize(value: TestCheckpoint): ByteArray {
+  override suspend fun serialize(value: TestCheckpoint): ByteArray {
     return value.position.toString().encodeToByteArray()
   }
 
-  override fun deserialize(bytes: ByteArray): TestCheckpoint {
+  override suspend fun deserialize(bytes: ByteArray): TestCheckpoint {
     val position = bytes.decodeToString().toLong()
     return TestCheckpoint(position)
   }
@@ -100,10 +100,10 @@ class CheckpointStoreInMemoryTest {
           object : CheckpointSerializer<TestCheckpoint> {
             override val checkpointType = "Other"
 
-            override fun serialize(value: TestCheckpoint): ByteArray =
+            override suspend fun serialize(value: TestCheckpoint): ByteArray =
                 value.position.toString().encodeToByteArray()
 
-            override fun deserialize(bytes: ByteArray): TestCheckpoint =
+            override suspend fun deserialize(bytes: ByteArray): TestCheckpoint =
                 TestCheckpoint(bytes.decodeToString().toLong())
           }
       val otherCheckpointStore =

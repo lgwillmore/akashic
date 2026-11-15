@@ -10,7 +10,7 @@ you get by folding the events in order.
 
 ```kotlin
 ```
-{src="src/main/kotlin/Account.kt" include-symbol="AccountCommand,AccountEvent,AccountState"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/Account.kt" include-symbol="AccountCommand,AccountEvent,AccountState"}
 
 State implements `AggregateState`, which only requires the aggregate's ID. The idempotency tracker and the
 `IdempotencyApplied` and `Retired` events are explained in [](idempotency.md) and [](event-codecs.md); you can leave
@@ -23,7 +23,7 @@ produce at least one event. `decideExisting` runs against current state and may 
 
 ```kotlin
 ```
-{src="src/main/kotlin/Account.kt" include-symbol="AccountDecider"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/Account.kt" include-symbol="AccountDecider"}
 
 Keep deciders free of side effects. They must not change state, call other services or read the clock. Resolve
 anything external before you build the command, and put the result in it.
@@ -35,7 +35,7 @@ is loaded.
 
 ```kotlin
 ```
-{src="src/main/kotlin/Account.kt" include-symbol="AccountEvolver"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/Account.kt" include-symbol="AccountEvolver"}
 
 The first event of a stream arrives with a `null` state. The account ID comes from the committed event, not from the
 event payload, so events do not need to repeat it.
@@ -47,7 +47,7 @@ are declared separately from the classes and never derived from them. Renaming a
 
 ```kotlin
 ```
-{src="src/main/kotlin/Account.kt" include-symbol="AccountEventTypes,AccountDefinition"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/Account.kt" include-symbol="AccountEventTypes,AccountDefinition"}
 
 `AggregateDefinition` is the single description of the aggregate. Services, repositories, subscriptions and snapshot
 tooling are all built from it. The `eventCodec` is covered in [](event-codecs.md).
@@ -59,7 +59,7 @@ causation references. A small helper keeps call sites short:
 
 ```kotlin
 ```
-{src="src/main/kotlin/Account.kt" include-symbol="forAccount"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/Account.kt" include-symbol="forAccount"}
 
 A backend provider builds the service. `InMemoryProvider` needs no setup:
 

@@ -17,7 +17,7 @@ providers:
 
 ```kotlin
 ```
-{src="src/main/kotlin/Wiring.kt" include-symbol="kurrentClient,kurrentBackend"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/Wiring.kt" include-symbol="kurrentClient,kurrentBackend"}
 
 The checkpoint store is the PostgreSQL one with a `CheckpointKurrentSerializer`, because a KurrentDB position is a
 commit and prepare pair, not a row ID. Run the PostgreSQL migrations as described in [](backend-postgresql.md); the
@@ -27,7 +27,7 @@ The provider implements `BackendProvider<CheckpointKurrent>`, and the applicatio
 
 ```kotlin
 ```
-{src="src/main/kotlin/Wiring.kt" include-symbol="kurrentApplication"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/Wiring.kt" include-symbol="kurrentApplication"}
 
 ## Mix capabilities yourself
 
@@ -72,7 +72,7 @@ generations from the position:
 
 ```kotlin
 ```
-{src="src/main/kotlin/Wiring.kt" include-symbol="kurrentGeneration"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/Wiring.kt" include-symbol="kurrentGeneration"}
 
 ## Client lifecycle
 

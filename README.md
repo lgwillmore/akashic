@@ -56,7 +56,7 @@ val result = accounts.handle(AccountCommand.Withdraw(30).forAccount("acc-1"))
 ```
 
 Swap `InMemoryProvider` for the PostgreSQL or KurrentDB provider and the same code runs in production. The complete
-example, with its tests, is in [`docs/guides/snippets`](docs/guides/snippets) and is explained step by step in
+example, with its tests, is in [`examples/bank-account`](examples/bank-account) and is explained step by step in
 [Getting started](https://lgwillmore.github.io/akashic/getting-started.html).
 
 - **Deciding and evolving are separate.** Evolvers need only events, so read models, snapshots and history queries
@@ -90,6 +90,7 @@ dependencies {
 | --- | --- |
 | `akashic-core` | Contracts, aggregate services, subscriptions, snapshots, and the in-memory backend |
 | `akashic-backend-exposed` | PostgreSQL backend on [Exposed](https://github.com/JetBrains/Exposed), with Liquibase migrations |
+| `akashic-crypto` | Cryptographic shredding of personal data: sealed fields in codecs, with the keys per data subject |
 | `akashic-backend-kurrent` | [KurrentDB](https://www.kurrent.io/) backend |
 
 Requires JDK 17 or later. Akashic is at `0.x`: the API and the stored formats may still change between releases.
@@ -123,7 +124,7 @@ docker compose up -d --wait   # PostgreSQL on 55432, KurrentDB on 22113
 - [`AGENTS.md`](AGENTS.md) holds the design rules the framework is built to.
 - [`docs/roadmap.md`](docs/roadmap.md) lists outstanding work.
 - The guides are a [Writerside](https://www.jetbrains.com/writerside/) project in `docs/guides`; open it with the
-  Writerside plugin for IntelliJ IDEA to preview them. The code they quote lives in `docs/guides/snippets` and is
+  Writerside plugin for IntelliJ IDEA to preview them. The code they quote lives in `examples/bank-account` and is
   compiled and tested by `./gradlew test`. `./gradlew dokkaGenerate` builds the API reference.
 - Releases are described in [`PUBLISHING_SETUP.md`](PUBLISHING_SETUP.md).
 

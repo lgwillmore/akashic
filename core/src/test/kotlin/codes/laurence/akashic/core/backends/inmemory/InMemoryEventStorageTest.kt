@@ -47,20 +47,20 @@ class InMemoryEventStorageTest {
       object : Codec<OrderEvent, String> {
         override val serializer =
             object : Serializer<String> {
-              override fun serialize(value: String): ByteArray = value.encodeToByteArray()
+              override suspend fun serialize(value: String): ByteArray = value.encodeToByteArray()
 
-              override fun deserialize(bytes: ByteArray): String = bytes.decodeToString()
+              override suspend fun deserialize(bytes: ByteArray): String = bytes.decodeToString()
             }
 
         override val converter =
             object : Converter<OrderEvent, String> {
-              override fun toPersisted(value: OrderEvent): String =
+              override suspend fun toPersisted(value: OrderEvent): String =
                   when (value) {
                     is OrderEvent.Placed -> "PLACED:${value.orderId}:${value.amount}"
                     is OrderEvent.Cancelled -> "CANCELLED:${value.orderId}:${value.reason}"
                   }
 
-              override fun toDomain(value: String): OrderEvent {
+              override suspend fun toDomain(value: String): OrderEvent {
                 val parts = value.split(":")
                 return when (parts[0]) {
                   "PLACED" -> OrderEvent.Placed(parts[1], parts[2].toLong())

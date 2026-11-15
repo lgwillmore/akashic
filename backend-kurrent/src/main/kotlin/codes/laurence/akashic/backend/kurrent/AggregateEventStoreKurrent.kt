@@ -101,7 +101,7 @@ class AggregateEventStoreKurrent<EVENT : Any, EVENT_PERSISTED : Any>(
         }
       }
 
-  private fun io.kurrent.dbclient.RecordedEvent.toCommittedEvent(): CommittedEvent<EVENT> {
+  private suspend fun io.kurrent.dbclient.RecordedEvent.toCommittedEvent(): CommittedEvent<EVENT> {
     val metadata = decodeKurrentEventMetadata(userMetadata)
     return CommittedEvent(
         eventId = eventId.toKotlinUuid(),

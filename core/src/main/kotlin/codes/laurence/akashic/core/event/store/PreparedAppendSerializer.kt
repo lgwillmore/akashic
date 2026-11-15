@@ -19,7 +19,7 @@ class PreparedAppendSerializer<EVENT : Any, PERSISTED : Any>(
     private val types: EventTypeNames.ForAggregate<EVENT>,
     private val codec: Codec<EVENT, PERSISTED>,
 ) : Serializer<PreparedAppend<EVENT>> {
-  override fun serialize(value: PreparedAppend<EVENT>): ByteArray {
+  override suspend fun serialize(value: PreparedAppend<EVENT>): ByteArray {
     require(value.aggregateType == types.aggregate)
     return ProtoBuf.encodeToByteArray(
         PreparedAppendP.serializer(),
@@ -44,7 +44,7 @@ class PreparedAppendSerializer<EVENT : Any, PERSISTED : Any>(
                 }))
   }
 
-  override fun deserialize(bytes: ByteArray): PreparedAppend<EVENT> {
+  override suspend fun deserialize(bytes: ByteArray): PreparedAppend<EVENT> {
     val data = ProtoBuf.decodeFromByteArray(PreparedAppendP.serializer(), bytes)
     require(data.aggregateType == types.aggregate)
     require(

@@ -6,10 +6,10 @@ import codes.laurence.akashic.core.checkpoint.CheckpointLong
 import codes.laurence.akashic.core.checkpoint.CheckpointLongSerializer
 import codes.laurence.akashic.core.checkpoint.CheckpointSerializer
 import codes.laurence.akashic.core.checkpoint.CheckpointStore
-import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabase
 
 class CheckpointStoreProviderExposed<CHECKPOINT : Checkpoint>(
-    private val database: Database,
+    private val database: R2dbcDatabase,
     private val serializer: CheckpointSerializer<CHECKPOINT>,
     private val tableConfig: CheckpointTableConfig = CheckpointTableConfig(),
 ) : CheckpointStoreProvider<CHECKPOINT> {
@@ -24,7 +24,7 @@ class CheckpointStoreProviderExposed<CHECKPOINT : Checkpoint>(
 
   companion object {
     fun ofLong(
-        database: Database,
+        database: R2dbcDatabase,
         tableConfig: CheckpointTableConfig = CheckpointTableConfig(),
     ): CheckpointStoreProviderExposed<CheckpointLong> =
         CheckpointStoreProviderExposed(

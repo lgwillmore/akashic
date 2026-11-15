@@ -25,17 +25,19 @@ plugins {
 
 include(
     ":core",
+    ":crypto",
     ":backend-exposed",
     ":backend-kurrent",
     ":integration-tests",
-    ":docs-snippets",
+    ":example-bank-account",
 )
 
 project(":core").name = "akashic-core"
+project(":crypto").name = "akashic-crypto"
 project(":backend-exposed").name = "akashic-backend-exposed"
 project(":backend-kurrent").name = "akashic-backend-kurrent"
 
-// Lives inside the Writerside module, whose topics quote its sources.
-project(":docs-snippets").projectDir = file("docs/guides/snippets")
+// The guides quote its sources through the docs/guides/snippets symlink.
+project(":example-bank-account").projectDir = file("examples/bank-account")
 
 rootProject.name = "akashic"

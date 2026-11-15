@@ -28,7 +28,7 @@ val CounterStateSchema =
         stateCodec =
             DirectCodec(
                 object : Serializer<CounterState> {
-                  override fun serialize(value: CounterState): ByteArray =
+                  override suspend fun serialize(value: CounterState): ByteArray =
                       listOf(
                               value.aggregateId,
                               value.name,
@@ -44,7 +44,7 @@ val CounterStateSchema =
                           .joinToString("|")
                           .encodeToByteArray()
 
-                  override fun deserialize(bytes: ByteArray): CounterState {
+                  override suspend fun deserialize(bytes: ByteArray): CounterState {
                     val parts = bytes.decodeToString().split('|')
                     val tracker =
                         CommandIdempotencyTracker(

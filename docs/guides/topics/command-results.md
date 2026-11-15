@@ -15,7 +15,7 @@ errors, serialization failures and broken invariants are thrown.
 
 ```kotlin
 ```
-{src="src/main/kotlin/CommandResults.kt" include-symbol="withdraw"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/CommandResults.kt" include-symbol="withdraw"}
 
 ## Conflicts
 
@@ -34,7 +34,7 @@ them now, so the append happens at most once.
 
 ```kotlin
 ```
-{src="src/main/kotlin/CommandResults.kt" include-symbol="AccountPreparedAppends,recoverWithdrawal"}
+{src="src/main/kotlin/codes/laurence/akashic/examples/bank/CommandResults.kt" include-symbol="AccountPreparedAppends,recoverWithdrawal"}
 
 To recover after a restart, store the prepared append with `PreparedAppendSerializer` before telling the caller the
 outcome is pending. A command ID or an event ID alone is not enough to recover.
