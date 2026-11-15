@@ -1,8 +1,13 @@
 package codes.laurence.akashic.examples.bank
 
 import codes.laurence.akashic.backend.kurrent.KurrentConfig
+import codes.laurence.akashic.core.aggregate.AggregateLookupResult
+import codes.laurence.akashic.core.aggregate.AggregateService
+import codes.laurence.akashic.core.backends.BackendProvider
+import codes.laurence.akashic.core.backends.builders.aggregates.aggregateService
 import codes.laurence.akashic.core.backends.inmemory.InMemoryProvider
 import codes.laurence.akashic.core.synchronous.waitForVersion
+import codes.laurence.akashic.crypto.SubjectVault
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.runBlocking
 
@@ -11,20 +16,51 @@ import kotlinx.coroutines.runBlocking
  * default), `postgres`, or `kurrent` with PostgreSQL snapshots and checkpoints. The database
  * settings default to `docker-compose.yml` at the repository root and can be overridden with
  * `AKASHIC_DB_URL`, `AKASHIC_DB_USER`, `AKASHIC_DB_PASSWORD`, `AKASHIC_KURRENT_HOST` and
- * `AKASHIC_KURRENT_PORT`.
+ * `AKASHIC_KURRENT_PORT`. Customer keys live in memory or in PostgreSQL with the other tables.
  */
 fun main(args: Array<String>) = runBlocking {
   val backend = args.firstOrNull() ?: "memory"
-  val application =
-      when (backend) {
-        "memory" -> AccountApplication(InMemoryProvider(), ::postgresGeneration)
-        "postgres" -> postgresApplication(localPostgres())
-        "kurrent" -> kurrentApplication(localKurrent(), localPostgres())
-        else -> error("Unknown backend '$backend': use memory, postgres or kurrent")
-      }
   println("Running the account application on $backend")
-  demo(application)
+  when (backend) {
+    "memory" -> {
+      val provider = InMemoryProvider()
+      demo(AccountApplication(provider, ::postgresGeneration))
+      erasureDemo(provider, memoryVault(wrappingKey()))
+    }
+    "postgres" -> {
+      val database = localPostgres()
+      demo(postgresApplication(database))
+      erasureDemo(postgresBackend(database), postgresVault(database, wrappingKey()))
+    }
+    "kurrent" -> {
+      val database = localPostgres()
+      demo(kurrentApplication(localKurrent(), database))
+      erasureDemo(kurrentBackend(localKurrent(), database), postgresVault(database, wrappingKey()))
+    }
+    else -> error("Unknown backend '$backend': use memory, postgres or kurrent")
+  }
 }
+
+/** Registers a customer, erases them, and shows what the history still reveals. */
+private suspend fun erasureDemo(backend: BackendProvider<*>, vault: SubjectVault) {
+  val customers = backend.aggregateService(customerDefinition(vault))
+  val customerId = "customer-${Uuid.random()}"
+  customers.handle(
+      CustomerCommand.Register(customerId, "Ada Lovelace", "ada@example.com")
+          .forCustomer(customerId))
+  println("Registered: ${customers.find(customerId)}")
+
+  CustomerErasure(customers, vault).erase(customerId)
+  println("Erased:     ${customers.find(customerId)}")
+}
+
+private suspend fun AggregateService<CustomerState, CustomerCommand, CustomerEvent>.find(
+    customerId: String
+) = (getById(customerId) as AggregateLookupResult.Found).committedState
+
+/** For the example only: a real deployment reads its wrapping key from a secret store. */
+private fun wrappingKey(): ByteArray =
+    env("AKASHIC_WRAPPING_KEY", "0123456789abcdef0123456789abcdef").encodeToByteArray()
 
 private suspend fun demo(application: AccountApplication<*>) {
   application.start()

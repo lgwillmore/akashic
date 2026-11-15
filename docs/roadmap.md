@@ -42,14 +42,13 @@ framework boundary live in [`AGENTS.md`](../AGENTS.md).
 
 ### Personal data
 
-13. **Cryptographic shredding of personal data.** Field-level sealing in the converter: `toPersisted` calls a vault to
-    seal a value under the data subject's key into a `SealedP(keyId, nonce, ciphertext)` persisted field, and `toDomain`
-    opens it to a domain `Shredable<T>` that is `Present` or `Shredded`, never a fake value. One AES-256-GCM data key per
-    subject, wrapped by a master key behind a `KeyWrapper` SPI; a `SubjectKeyStore` SPI with an in-memory implementation
-    and a PostgreSQL `subject_keys` table. Shredding leaves a tombstone so decode distinguishes shredded (open to
-    `Shredded`) from an unknown key ID (stop replay). The snapshot state codec seals with the same keys so one shred
-    covers snapshots. Done in preparation: the codec boundary suspends, the Exposed backend runs on R2DBC, and the
-    bank-account example is its own module. The vault, SPIs and a new `akashic-crypto` module remain.
+13. **Cryptographic shredding: what remains.** `akashic-crypto` ships the vault, `Shredable`/`SealedP`, the
+    `SubjectKeyStore` and `KeyWrapper` SPIs, the in-memory store and the PostgreSQL `subject_keys` table, prototyped on
+    the example's `Customer` aggregate. Open: a KMS-backed `KeyWrapper` (AWS/GCP) as an optional module or a documented
+    recipe; re-wrapping stored keys when the wrapping key rotates (`SubjectKeyStore.rewrap`); whether converters should
+    receive the aggregate ID so the subject need not ride in every event; a subscription-driven cache invalidation if
+    the one-minute TTL proves too slow for multi-instance erasure; and tombstone retention (a shredded key's row is
+    kept forever today).
 
 ### Hardening
 

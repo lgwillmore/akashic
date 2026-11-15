@@ -6,10 +6,12 @@ plugins {
 }
 
 description =
-    "Akashic PostgreSQL backend on Exposed R2DBC: events, snapshots, checkpoints, subscription leases"
+    "Akashic PostgreSQL backend on Exposed R2DBC: events, snapshots, checkpoints, subscription leases, subject keys"
 
 dependencies {
   api(project(":akashic-core"))
+  // SubjectKeyStoreExposed implements the akashic-crypto key store SPI.
+  api(project(":akashic-crypto"))
   api(libs.exposedR2dbc)
   implementation(libs.exposedCore)
   implementation(libs.exposedKotlinDatetime)
@@ -21,4 +23,5 @@ dependencies {
   testFixturesApi(testFixtures(project(":akashic-core")))
   testFixturesImplementation(libs.r2dbcPool)
   testFixturesImplementation(libs.junitJupiterApi)
+  testImplementation(testFixtures(project(":akashic-crypto")))
 }

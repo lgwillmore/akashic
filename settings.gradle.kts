@@ -25,6 +25,7 @@ plugins {
 
 include(
     ":core",
+    ":crypto",
     ":backend-exposed",
     ":backend-kurrent",
     ":integration-tests",
@@ -32,6 +33,7 @@ include(
 )
 
 project(":core").name = "akashic-core"
+project(":crypto").name = "akashic-crypto"
 project(":backend-exposed").name = "akashic-backend-exposed"
 project(":backend-kurrent").name = "akashic-backend-kurrent"
 

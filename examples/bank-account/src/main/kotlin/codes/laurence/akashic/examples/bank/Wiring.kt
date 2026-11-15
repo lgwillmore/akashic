@@ -5,6 +5,7 @@ import codes.laurence.akashic.backend.exposed.CheckpointStoreProviderExposed
 import codes.laurence.akashic.backend.exposed.DBMigrationManagerEventSourcing
 import codes.laurence.akashic.backend.exposed.ExposedSubscriptionConfig
 import codes.laurence.akashic.backend.exposed.SnapshotStoreProviderExposed
+import codes.laurence.akashic.backend.exposed.SubjectKeyStoreExposed
 import codes.laurence.akashic.backend.exposed.SubscriptionOwnershipExposed
 import codes.laurence.akashic.backend.kurrent.BackendProviderKurrent
 import codes.laurence.akashic.backend.kurrent.CheckpointKurrent
@@ -17,6 +18,10 @@ import codes.laurence.akashic.core.backends.builders.subscriptions.subscriptionR
 import codes.laurence.akashic.core.checkpoint.Checkpoint
 import codes.laurence.akashic.core.checkpoint.CheckpointLong
 import codes.laurence.akashic.core.event.subscription.SubscriptionOptions
+import codes.laurence.akashic.crypto.AesGcmKeyWrapper
+import codes.laurence.akashic.crypto.SubjectKeyStore
+import codes.laurence.akashic.crypto.SubjectKeyStoreInMemory
+import codes.laurence.akashic.crypto.SubjectVault
 import io.kurrent.dbclient.KurrentDBClient
 import io.r2dbc.pool.PoolingConnectionFactoryProvider
 import io.r2dbc.spi.ConnectionFactories
@@ -97,6 +102,20 @@ fun postgresBackendTuned(database: R2dbcDatabase): BackendProviderExposed =
         subscriptionOwnershipProvider =
             SubscriptionOwnershipExposed(database, leaseDuration = 15.seconds),
     )
+
+/**
+ * One vault per deployment. The key store holds each customer's data key, wrapped by the wrapping
+ * key, which comes from a secret store and never touches the database. A cloud KMS replaces
+ * [AesGcmKeyWrapper] by implementing `KeyWrapper`.
+ */
+fun subjectVault(keyStore: SubjectKeyStore, wrappingKey: ByteArray): SubjectVault =
+    SubjectVault(keyStore, AesGcmKeyWrapper(keyId = "wrapping-key-1", key = wrappingKey))
+
+fun postgresVault(database: R2dbcDatabase, wrappingKey: ByteArray): SubjectVault =
+    subjectVault(SubjectKeyStoreExposed(database), wrappingKey)
+
+fun memoryVault(wrappingKey: ByteArray): SubjectVault =
+    subjectVault(SubjectKeyStoreInMemory(), wrappingKey)
 
 fun postgresGeneration(checkpoint: CheckpointLong?): String =
     "checkpoint:${checkpoint?.id ?: "beginning"}"

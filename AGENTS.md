@@ -27,7 +27,8 @@ subscriptions and checkpoints, or snapshots across the supported backends.
 | Module | Artifact | Packages | Contents |
 | --- | --- | --- | --- |
 | `core` | `akashic-core` | `codes.laurence.akashic.core.*` | Aggregates, store and subscription contracts, snapshots, checkpoints, codecs, provider SPI and builders, and the in-memory backend (`core.backends.inmemory`). Depends only on kotlinx-coroutines, kotlinx-serialization and kotlin-logging. |
-| `backend-exposed` | `akashic-backend-exposed` | `codes.laurence.akashic.backend.exposed` | PostgreSQL on Exposed R2DBC: events, snapshots, checkpoints, subscription leases, and the Liquibase change sets. |
+| `crypto` | `akashic-crypto` | `codes.laurence.akashic.crypto` | Cryptographic shredding of personal data: `Shredable`, `SealedP`, `SubjectVault`, the `SubjectKeyStore` and `KeyWrapper` SPIs, the in-memory key store and the AES-GCM wrapper. Depends only on core and kotlinx-serialization-protobuf. |
+| `backend-exposed` | `akashic-backend-exposed` | `codes.laurence.akashic.backend.exposed` | PostgreSQL on Exposed R2DBC: events, snapshots, checkpoints, subscription leases, subject keys, and the Liquibase change sets. |
 | `backend-kurrent` | `akashic-backend-kurrent` | `codes.laurence.akashic.backend.kurrent` | KurrentDB event streams and subscriptions. |
 | `integration-tests` | not published | `codes.laurence.akashic.integration` | Scenarios run against every backend: the shared event-store contract, subscription sources, the caching service over a shared store, and end-to-end builders. |
 
@@ -39,15 +40,16 @@ subscriptions and checkpoints, or snapshots across the supported backends.
   topic. Change a guide's code in the example module, never inline in the topic, and keep prose claims in step with
   the library. The Docs workflow builds the guides and the Dokka API reference and publishes both to GitHub Pages on
   each release.
-- Core never depends on a backend module. A backend depends on core through `api`, since its public types implement core contracts.
+- Core never depends on a backend module. A backend depends on core through `api`, since its public types implement core contracts. `backend-exposed` also depends on `crypto` through `api` for `SubjectKeyStoreExposed`; crypto never depends on a backend.
 - Declarations that backends need from core but users must not rely on are public and marked `@AkashicInternalApi`
   (a `RequiresOptIn` error). The build opts every module in; keep everything else `internal` or `private`.
 - Test fixtures (`java-test-fixtures`) are shared between modules. Core's are also published, as the `akashic-core`
   test-fixtures variant, for consumers seeding stores and subscribers in their tests; the backend fixtures are not.
   The `Counter` aggregate stubs and the construction contract live in core's fixtures, the PostgreSQL and KurrentDB
-  connection helpers in each backend's.
+  connection helpers in each backend's, and the `SubjectKeyStoreContract` every key store runs in crypto's.
 - Persisted formats: the event-ID namespace and `akashic-prepared-event-id-v1` format string (`StableEventId`, pinned
-  by `StableEventIdTest`), the `akashic-` KurrentDB stream prefix, and the `event_sourcing` schema with its
+  by `StableEventIdTest`), the `akashic-` KurrentDB stream prefix, the `SealedP` field numbers and AES-GCM layout
+  (key ID as additional authenticated data, 96-bit nonce, 128-bit tag), and the `event_sourcing` schema with its
   `liquibase.eventsourcing/` change sets. Nothing runs them in production yet, so change them freely and edit creation
   change sets in place; once something does, they need migrations and golden histories (roadmap).
 
@@ -160,6 +162,11 @@ subscriptions and checkpoints, or snapshots across the supported backends.
 - `Codec`, `Converter` and `Serializer` suspend in both directions so a codec may perform I/O, such as resolving
   per-subject encryption keys. Stores read rows inside their transaction and call the codec after it returns; never
   call the codec inside a blocking JDBC transaction or a client callback thread.
+- Personal data is sealed in the converter with `akashic-crypto`: the domain holds `Shredable<T>`, the persisted model
+  holds `SealedP`, and the converter calls `SubjectVault.seal`/`open` under the subject named in the event. Snapshot
+  state seals under the same subject so one shred covers it. A shredded key opens to `Shredded`; a key the store never
+  issued throws and stops replay. Never substitute a stand-in value in the framework; the domain chooses one with
+  `valueOr`. The vault caches unwrapped keys with a TTL, which bounds how long another instance's shred is invisible.
 - Events use `EventCodec<PERSISTED, DOMAIN>` so stable persisted schemas and current domain events are
   explicit, independently evolvable models. Keep serialization and conversion independently testable.
 - Every persisted event converts to exactly one domain event. Map recognized obsolete variants to a

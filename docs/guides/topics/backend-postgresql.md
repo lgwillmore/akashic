@@ -1,6 +1,6 @@
 # PostgreSQL
 
-`akashic-backend-exposed` stores events, snapshots, checkpoints and subscription leases in PostgreSQL, using
+`akashic-backend-exposed` stores events, snapshots, checkpoints, subscription leases and subject keys in PostgreSQL, using
 [Exposed](https://github.com/JetBrains/Exposed) over R2DBC, so no store call blocks a thread.
 
 ```kotlin
@@ -14,8 +14,9 @@ and the PostgreSQL JDBC driver that Liquibase migrates through.
 
 ## Create the tables
 
-The module ships Liquibase change sets for an `event_sourcing` schema with four tables: `events`,
-`subscription_checkpoints`, `snapshots` and `subscription_leases`. Apply them at startup:
+The module ships Liquibase change sets for an `event_sourcing` schema with five tables: `events`,
+`subscription_checkpoints`, `snapshots`, `subscription_leases` and `subject_keys` (the key store for
+[personal data](personal-data.md)). Apply them at startup:
 
 ```kotlin
 ```

@@ -90,6 +90,7 @@ dependencies {
 | --- | --- |
 | `akashic-core` | Contracts, aggregate services, subscriptions, snapshots, and the in-memory backend |
 | `akashic-backend-exposed` | PostgreSQL backend on [Exposed](https://github.com/JetBrains/Exposed), with Liquibase migrations |
+| `akashic-crypto` | Cryptographic shredding of personal data: sealed fields in codecs, with the keys per data subject |
 | `akashic-backend-kurrent` | [KurrentDB](https://www.kurrent.io/) backend |
 
 Requires JDK 17 or later. Akashic is at `0.x`: the API and the stored formats may still change between releases.

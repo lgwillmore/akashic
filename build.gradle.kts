@@ -32,6 +32,7 @@ dokka { moduleName = "Akashic" }
 
 dependencies {
   dokka(project(":akashic-core"))
+  dokka(project(":akashic-crypto"))
   dokka(project(":akashic-backend-exposed"))
   dokka(project(":akashic-backend-kurrent"))
 }

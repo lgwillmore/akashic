@@ -14,6 +14,7 @@ application { mainClass.set("codes.laurence.akashic.examples.bank.MainKt") }
 
 dependencies {
   implementation(project(":akashic-core"))
+  implementation(project(":akashic-crypto"))
   implementation(project(":akashic-backend-exposed"))
   implementation(project(":akashic-backend-kurrent"))
   implementation(libs.kotlinxSerializationProtobuf)
